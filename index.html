@@ -2374,12 +2374,20 @@ function calcProjection() {
   const youthEndIdx = isYouth
     ? snapshots.reduce((best, s, i) => s.label.includes('end') ? i : best, -1)
     : -1;
-  renderProjection(snapshots, startSkills, levelUps, youthEndIdx);
+
+  // Check if current plan is from Excel (trusted) or potentially stale
+  const sel = document.getElementById('plannerPlayerSelect').value;
+  const planMeta = sel && state.trainingPlans && state.trainingPlans[sel];
+  const planIsExcel = planMeta && planMeta.fromExcel;
+  const planExists = !!planMeta;
+
+  renderProjection(snapshots, startSkills, levelUps, youthEndIdx, { planIsExcel, planExists });
 }
 
-function renderProjection(snapshots, startSkills, levelUps, youthEndIdx) {
+function renderProjection(snapshots, startSkills, levelUps, youthEndIdx, planInfo) {
   if (snapshots.length < 2) return;
   levelUps = levelUps || [];
+  planInfo = planInfo || {};
   document.getElementById('projCard').style.display = '';
 
   const skills = ['bat','bowl','tech','keep','field','end','pow'];
@@ -2557,6 +2565,15 @@ function renderProjection(snapshots, startSkills, levelUps, youthEndIdx) {
   }
 
   // Show sublevel info if training log was used
+  // Plan source warning banner
+  let planWarning = '';
+  if (planInfo.planExists && !planInfo.planIsExcel) {
+    planWarning = `<div style="font-size:0.76rem;color:#fbbf24;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.4);border-radius:6px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+      ⚠️ <span><strong>Manually saved plan loaded</strong> — this plan was not imported from Excel and may be outdated.
+      If results look wrong, go to <strong>Import tab → Import Player Training Plan from Excel</strong> and re-upload the player's Excel file, or use 🗑️ <strong>Reset Plan</strong> to clear it.</span>
+    </div>`;
+  }
+
   let subLevelNote = '';
   const loggedSkills = Object.keys(plannerSubLevelOffsets);
   if (loggedSkills.length > 0) {
@@ -2574,7 +2591,7 @@ function renderProjection(snapshots, startSkills, levelUps, youthEndIdx) {
     </div>`;
   }
 
-  document.getElementById('projOutput').innerHTML = subLevelNote + summaryHtml + tableHtml + levelUpHtml;
+  document.getElementById('projOutput').innerHTML = planWarning + subLevelNote + summaryHtml + tableHtml + levelUpHtml;
 }
 
 function populatePlannerSelect() {
@@ -2836,12 +2853,14 @@ function applyExcelPlans(results, statusEl, previewEl) {
     }
 
     // Save plan
+    // Always overwrite — Excel import is authoritative; clears any stale auto-filled plan
     state.trainingPlans[player.id] = {
       youth: r.youthSchedule,
       senior: r.seniorSchedule,
       youthAcademy: r.youthAcademy,
       seniorAcademy: r.seniorAcademy,
-      talent: r.talent
+      talent: r.talent,
+      fromExcel: true
     };
 
     // Count weeks
@@ -2905,7 +2924,12 @@ function importTSV(merge) {
         // so the planner re-initialises from the updated starting values
         const skillKeys = ['bat','bowl','tech','end','pow','keep','field'];
         const skillsChanged = skillKeys.some(k => (p[k] || 0) > (existing[k] || 0));
-        if ((existing.training !== p.training || skillsChanged) && state.trainingPlans && state.trainingPlans[p.id]) {
+        // Clear plan on training change or skill level-up — but NOT on ageweeks advance alone,
+        // since Excel-imported plans are age-week-agnostic (the projection wkStart handles skipping).
+        // Exception: clear if no Excel source tag (plan came from old TSV auto-fill bug).
+        const planExists = state.trainingPlans && state.trainingPlans[p.id];
+        const planIsFromExcel = planExists && state.trainingPlans[p.id].fromExcel;
+        if ((existing.training !== p.training || skillsChanged) && planExists && !planIsFromExcel) {
           delete state.trainingPlans[p.id];
         }
       }
