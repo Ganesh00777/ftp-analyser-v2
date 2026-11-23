@@ -840,83 +840,219 @@ function skillLabel(n) { return SKILL_NUM_MAP[Math.min(15, Math.max(0, Math.roun
 
 // ═══════════════════════════════════════════════════════════════
 // TRAINING GAIN DATABASE
-// Per-age sub-level gains for each skill under each training type.
-// Source: FTP_Training_5.4.xlsx DB sheet.
-// BASE_GAIN: sublevels per week at age 19, excellent academy, no talent
-// Calibrated against community Excel planner (Hannan Khadim, Prodigy, lavish, ages 16-20)
-// Bowling/Fielding/Fitness values verified; others scaled proportionally
-// We embed a simplified lookup: for each (academy, talent, training) combo
-// we store [End, Bat, Bowl, Tech, Pow, Keep, Field] gains per age group.
-// Ages 16-20 each have distinct multipliers baked into the reference sheet.
-// For youth we interpolate by age; for senior (age 21+) gains decay.
+// Exact per-age sub-level gains decoded from FTP_Training_5.4.xlsx DB sheet.
+// Values = sublevels/week at EXCELLENT academy, NO talent.
+// Academy and talent multipliers applied at runtime.
+// Ages 16-31 each have their own row (no interpolation needed).
 // ═══════════════════════════════════════════════════════════════
 
-// Training types and which skills they primarily affect
-const TRAINING_SKILLS = {
-  'Batting':        { bat: 1.0, tech: 0.6, end: 0.2 },
-  'Batting-Tech':   { bat: 0.65, tech: 1.0, end: 0.2 },
-  'Bowling':        { bowl: 1.0, tech: 0.6, end: 0.2 },
-  'Bowling-Tech':   { bowl: 0.65, tech: 1.0, end: 0.2 },
-  'All-Rounder':    { bat: 0.5, bowl: 0.5, tech: 0.45, end: 0.2 },
-  'Keeping':        { keep: 1.0, tech: 0.6, field: 0.25, end: 0.2 },
-  'Keeper-Batsman': { bat: 0.6, keep: 0.8, tech: 0.6, field: 0.2, end: 0.2 },
-  'Fielding':       { field: 1.0, tech: 0.3, end: 0.2 },
-  'Fitness':        { end: 1.0, pow: 0.25 },
-  'Strength':       { end: 0.5, pow: 1.0 },
-  'Rest':           {}
-};
-
-// Academy multiplier (index 0=minimal … 10=deluxe)
-const ACADEMY_MULT = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
 const ACADEMY_NAMES = ['minimal','meagre','inadequate','reasonable','satisfactory','good','excellent','superior','lavish','luxurious','deluxe'];
 
-// Base sub-level gains per training week at age 19 (baseline), outstanding academy, no talent
-// (extracted from DB sheet row outstanding-None-* at age 19)
-const BASE_GAIN = {
-  'Batting':        { bat: 6.86, tech: 5.02, end: 6.86 },
-  'Batting-Tech':   { bat: 5.02, tech: 7.78, end: 6.86 },
-  'Bowling':        { bowl: 6.86, tech: 5.02, end: 6.86 },
-  'Bowling-Tech':   { bowl: 5.02, tech: 7.78, end: 6.86 },
-  'All-Rounder':    { bat: 4.81, bowl: 4.81, tech: 4.17, end: 6.86 },
-  'Keeping':        { keep: 14.70, tech: 5.02, field: 0.81, end: 6.86 },
-  'Keeper-Batsman': { bat: 5.52, keep: 7.35, tech: 5.02, field: 0.61, end: 6.86 },
-  'Fielding':       { field: 4.45, tech: 1.63, end: 6.86 },
-  'Fitness':        { end: 55.77, pow: 30.53 },
-  'Strength':       { end: 6.86, pow: 83.60 },
-  'Rest':           {}
-};
+// Academy multipliers relative to excellent (index 6), derived from DB sheet (Bowling/None age-19 ratios)
+const ACADEMY_MULT = [0.8523, 0.8750, 0.8977, 0.9205, 0.9545, 0.9773, 1.0000, 1.0227, 1.0568, 1.0795, 1.1023];
 
-// Age multipliers (from DB sheet — ratio of age col to age-19 col for batting at outstanding/None/Batting)
-// Age:   16    17    18    19    20    (21+ senior decay applied separately)
-const AGE_MULT = { 16: 1.21, 17: 1.16, 18: 1.11, 19: 1.0, 20: 0.93 };
-
-// Talent multipliers — apply to the primary trained skill(s)
+// Talent multipliers — Prodigy boosts all skills ~1.2×; Gifted variants boost one skill ~1.2×
 const TALENT_BOOST = {
   'None': {},
   'Prodigy': { bat: 1.2, bowl: 1.2, tech: 1.2, keep: 1.2, field: 1.2, end: 1.2, pow: 1.2 },
-  'Gifted (Batting)': { bat: 1.2 },
-  'Gifted (Bowling)': { bowl: 1.2 },
+  'Gifted (Batting)':   { bat: 1.2 },
+  'Gifted (Bowling)':   { bowl: 1.2 },
   'Gifted (Technique)': { tech: 1.2 },
-  'Gifted (Keeping)': { keep: 1.2 },
-  'Gifted (Fielding)': { field: 1.2 },
+  'Gifted (Keeping)':   { keep: 1.2 },
+  'Gifted (Fielding)':  { field: 1.2 },
   'Gifted (Endurance)': { end: 1.2 },
-  'Gifted (Power)': { pow: 1.2 }
+  'Gifted (Power)':     { pow: 1.2 }
 };
 
-// Senior age gain multiplier (relative to age-19 reference rate in BASE_GAIN).
-// FTP training decreases each birthday; players still improve but slower than youth.
-// Values approximate community knowledge; exact game formula not publicly disclosed.
-function seniorAgeMult(age) {
-  if (age < 21) return 1.0;
-  if (age <= 23) return 0.90;
-  if (age <= 26) return 0.75;
-  if (age <= 29) return 0.55;
-  return 0.0; // 30+ skills decline — handled as negative decay
-}
+// Exact DB values: sublevels/week at excellent/None for each training × age
+// Keys: bat, bowl, tech, end, pow, keep, field
+const DB_GAINS = {
+  'Batting': {
+    16: { bat:105, tech: 77, end:211 },
+    17: { bat:101, tech: 74, end:204 },
+    18: { bat: 96, tech: 70, end:195 },
+    19: { bat: 88, tech: 64, end:181 },
+    20: { bat: 81, tech: 59, end:169 },
+    21: { bat: 75, tech: 55, end: 29 },
+    22: { bat: 69, tech: 51, end: 29 },
+    23: { bat: 62, tech: 45, end: 29 },
+    24: { bat: 56, tech: 41, end: 29 },
+    25: { bat: 50, tech: 36, end: 29 },
+    26: { bat: 44, tech: 32, end: 29 },
+    27: { bat: 39, tech: 29, end: 29 },
+    28: { bat: 35, tech: 25, end: 29 },
+    29: { bat: 30, tech: 22, end: 29 },
+    30: { bat: 26, tech: 19, end: 29 },
+    31: { bat: 22, tech: 16, end: 26 }
+  },
+  'Batting-Tech': {
+    16: { bat: 77, tech:119, end:225 },
+    17: { bat: 74, tech:114, end:217 },
+    18: { bat: 70, tech:109, end:208 },
+    19: { bat: 64, tech:100, end:193 },
+    20: { bat: 59, tech: 92, end:180 },
+    21: { bat: 55, tech: 85, end: 29 },
+    22: { bat: 51, tech: 79, end: 29 },
+    23: { bat: 46, tech: 71, end: 29 },
+    24: { bat: 41, tech: 64, end: 29 },
+    25: { bat: 36, tech: 57, end: 29 },
+    26: { bat: 32, tech: 50, end: 29 },
+    27: { bat: 29, tech: 45, end: 29 },
+    28: { bat: 25, tech: 40, end: 29 },
+    29: { bat: 22, tech: 35, end: 29 },
+    30: { bat: 19, tech: 30, end: 29 },
+    31: { bat: 16, tech: 25, end: 26 }
+  },
+  'Bowling': {
+    16: { bowl:105, tech: 77, end:211 },
+    17: { bowl:101, tech: 74, end:204 },
+    18: { bowl: 96, tech: 70, end:195 },
+    19: { bowl: 88, tech: 64, end:181 },
+    20: { bowl: 81, tech: 59, end:169 },
+    21: { bowl: 75, tech: 55, end: 29 },
+    22: { bowl: 69, tech: 51, end: 29 },
+    23: { bowl: 62, tech: 45, end: 29 },
+    24: { bowl: 56, tech: 41, end: 29 },
+    25: { bowl: 50, tech: 36, end: 29 },
+    26: { bowl: 44, tech: 32, end: 29 },
+    27: { bowl: 39, tech: 29, end: 29 },
+    28: { bowl: 35, tech: 25, end: 29 },
+    29: { bowl: 30, tech: 22, end: 29 },
+    30: { bowl: 26, tech: 19, end: 29 },
+    31: { bowl: 22, tech: 16, end: 26 }
+  },
+  'Bowling-Tech': {
+    16: { bowl: 77, tech:119, end:225 },
+    17: { bowl: 74, tech:114, end:217 },
+    18: { bowl: 70, tech:109, end:208 },
+    19: { bowl: 64, tech:100, end:193 },
+    20: { bowl: 59, tech: 92, end:180 },
+    21: { bowl: 55, tech: 85, end: 29 },
+    22: { bowl: 51, tech: 79, end: 29 },
+    23: { bowl: 46, tech: 71, end: 29 },
+    24: { bowl: 41, tech: 64, end: 29 },
+    25: { bowl: 36, tech: 57, end: 29 },
+    26: { bowl: 32, tech: 50, end: 29 },
+    27: { bowl: 29, tech: 45, end: 29 },
+    28: { bowl: 25, tech: 40, end: 29 },
+    29: { bowl: 22, tech: 35, end: 29 },
+    30: { bowl: 19, tech: 30, end: 29 },
+    31: { bowl: 16, tech: 25, end: 26 }
+  },
+  'All-Rounder': {
+    16: { bat: 74, bowl: 74, tech: 64, end:241 },
+    17: { bat: 71, bowl: 71, tech: 62, end:233 },
+    18: { bat: 68, bowl: 68, tech: 59, end:224 },
+    19: { bat: 62, bowl: 62, tech: 54, end:207 },
+    20: { bat: 57, bowl: 57, tech: 50, end:193 },
+    21: { bat: 53, bowl: 53, tech: 46, end: 29 },
+    22: { bat: 49, bowl: 49, tech: 42, end: 29 },
+    23: { bat: 44, bowl: 44, tech: 38, end: 29 },
+    24: { bat: 40, bowl: 40, tech: 34, end: 29 },
+    25: { bat: 35, bowl: 35, tech: 30, end: 29 },
+    26: { bat: 31, bowl: 31, tech: 27, end: 29 },
+    27: { bat: 28, bowl: 28, tech: 24, end: 29 },
+    28: { bat: 25, bowl: 25, tech: 21, end: 29 },
+    29: { bat: 21, bowl: 21, tech: 18, end: 29 },
+    30: { bat: 18, bowl: 18, tech: 16, end: 29 },
+    31: { bat: 15, bowl: 15, tech: 13, end: 26 }
+  },
+  'Keeping': {
+    16: { keep:225, tech: 77, field: 56, end:387 },
+    17: { keep:216, tech: 74, field: 54, end:373 },
+    18: { keep:206, tech: 70, field: 51, end:356 },
+    19: { keep:188, tech: 64, field: 47, end:328 },
+    20: { keep:174, tech: 60, field: 42, end:305 },
+    21: { keep:162, tech: 55, field: 40, end: 29 },
+    22: { keep:149, tech: 51, field: 37, end: 29 },
+    23: { keep:134, tech: 46, field: 33, end: 29 },
+    24: { keep:120, tech: 41, field: 30, end: 29 },
+    25: { keep:107, tech: 36, field: 26, end: 29 },
+    26: { keep: 94, tech: 32, field: 23, end: 29 },
+    27: { keep: 84, tech: 29, field: 21, end: 29 },
+    28: { keep: 75, tech: 25, field: 18, end: 29 },
+    29: { keep: 66, tech: 22, field: 16, end: 29 },
+    30: { keep: 56, tech: 19, field: 14, end: 29 },
+    31: { keep: 47, tech: 16, field: 11, end: 26 }
+  },
+  'Keeper-Batsman': {
+    16: { keep:112, bat: 84, tech: 77, field: 42, end:344 },
+    17: { keep:108, bat: 81, tech: 74, field: 40, end:332 },
+    18: { keep:103, bat: 77, tech: 70, field: 38, end:317 },
+    19: { keep: 94, bat: 70, tech: 64, field: 35, end:292 },
+    20: { keep: 87, bat: 65, tech: 60, field: 31, end:272 },
+    21: { keep: 81, bat: 60, tech: 55, field: 30, end: 29 },
+    22: { keep: 74, bat: 55, tech: 51, field: 27, end: 29 },
+    23: { keep: 67, bat: 50, tech: 46, field: 25, end: 29 },
+    24: { keep: 60, bat: 45, tech: 41, field: 22, end: 29 },
+    25: { keep: 53, bat: 40, tech: 36, field: 20, end: 29 },
+    26: { keep: 47, bat: 35, tech: 32, field: 17, end: 29 },
+    27: { keep: 42, bat: 31, tech: 29, field: 15, end: 29 },
+    28: { keep: 37, bat: 28, tech: 25, field: 14, end: 29 },
+    29: { keep: 33, bat: 24, tech: 22, field: 12, end: 29 },
+    30: { keep: 28, bat: 21, tech: 19, field: 10, end: 29 },
+    31: { keep: 23, bat: 17, tech: 16, field:  8, end: 26 }
+  },
+  'Fielding': {
+    16: { field:310, tech: 42, end:381 },
+    17: { field:297, tech: 40, end:366 },
+    18: { field:283, tech: 38, end:350 },
+    19: { field:259, tech: 35, end:323 },
+    20: { field:239, tech: 32, end:300 },
+    21: { field:222, tech: 30, end: 29 },
+    22: { field:205, tech: 27, end: 29 },
+    23: { field:184, tech: 25, end: 29 },
+    24: { field:166, tech: 22, end: 29 },
+    25: { field:147, tech: 20, end: 29 },
+    26: { field:129, tech: 17, end: 29 },
+    27: { field:116, tech: 15, end: 29 },
+    28: { field:103, tech: 14, end: 29 },
+    29: { field: 90, tech: 12, end: 29 },
+    30: { field: 77, tech: 10, end: 29 },
+    31: { field: 64, tech:  8, end: 26 }
+  },
+  'Fitness': {
+    16: { end:277, pow: 41 },
+    17: { end:285, pow: 49 },
+    18: { end:293, pow: 57 },
+    19: { end:302, pow: 66 },
+    20: { end:306, pow: 70 },
+    21: { end:236, pow: 74 },
+    22: { end:236, pow: 78 },
+    23: { end:236, pow: 82 },
+    24: { end:236, pow: 82 },
+    25: { end:236, pow: 82 },
+    26: { end:236, pow: 82 },
+    27: { end:236, pow: 82 },
+    28: { end:236, pow: 74 },
+    29: { end:236, pow: 66 },
+    30: { end:236, pow: 57 },
+    31: { end:212, pow: 49 }
+  },
+  'Strength': {
+    16: { end:188, pow:112 },
+    17: { end:209, pow:133 },
+    18: { end:231, pow:155 },
+    19: { end:254, pow:178 },
+    20: { end:266, pow:190 },
+    21: { end: 76, pow:201 },
+    22: { end: 76, pow:212 },
+    23: { end: 76, pow:224 },
+    24: { end: 76, pow:224 },
+    25: { end: 76, pow:224 },
+    26: { end: 76, pow:224 },
+    27: { end: 76, pow:224 },
+    28: { end: 76, pow:201 },
+    29: { end: 76, pow:178 },
+    30: { end: 76, pow:155 },
+    31: { end: 69, pow:134 }
+  },
+  'Rest': {}
+};
 
-// Sub-levels per integer skill level (cumulative; ~100 sublevels per level, matching community Excel planners)
-// Levels 0-10: 100 sublevels each; levels 11-15: 150 sublevels each (harder to level up at high end)
-const SUBLEVELS_AT = [0, 99, 199, 299, 399, 499, 599, 699, 799, 899, 999, 1149, 1299, 1449, 1599, 1749];
+// Sub-levels per integer skill level (cumulative, 1000-sublevel scale matching community Excel planners)
+// Levels 0-10: 1000 sublevels each; levels 11-15: 1500 sublevels each (harder at high end)
+const SUBLEVELS_AT = [0, 999, 1999, 2999, 3999, 4999, 5999, 6999, 7999, 8999, 9999, 11499, 12999, 14499, 15999, 17499];
 
 function sublevelsToSkill(sublevels) {
   for (let i = SUBLEVELS_AT.length - 1; i >= 0; i--) {
@@ -928,23 +1064,25 @@ function sublevelsToSkill(sublevels) {
 function skillToSublevels(skillInt) {
   const idx = Math.min(15, Math.max(0, skillInt));
   const lo = SUBLEVELS_AT[idx];
-  const hi = idx < 15 ? SUBLEVELS_AT[idx + 1] - 1 : 1749;
+  const hi = idx < 15 ? SUBLEVELS_AT[idx + 1] - 1 : 17499;
   return Math.floor((lo + hi) / 2); // midpoint — prevents rounding from dropping back a level
 }
 
-// Compute gain for one training week
+// Compute gain for one training week using exact DB values
 function weekGain(trainingType, academy, talent, age) {
-  const base = BASE_GAIN[trainingType];
+  const trainingDB = DB_GAINS[trainingType];
+  if (!trainingDB) return {};
+  // Clamp age to range 16–31 (DB only has ages 16–31; use boundary for out-of-range)
+  const ageKey = Math.min(31, Math.max(16, Math.floor(age)));
+  const base = trainingDB[ageKey];
   if (!base) return {};
   const acadIdx = ACADEMY_NAMES.indexOf(academy);
   const acadMult = acadIdx >= 0 ? ACADEMY_MULT[acadIdx] : 1.0;
-  const ageClamp = Math.min(20, Math.max(16, age));
-  const ageMult = age >= 21 ? seniorAgeMult(age) : (AGE_MULT[ageClamp] || 1.0);
   const talBoost = TALENT_BOOST[talent] || {};
   const result = {};
   for (const [skill, gain] of Object.entries(base)) {
     const tb = talBoost[skill] || 1.0;
-    result[skill] = gain * acadMult * ageMult * tb;
+    result[skill] = gain * acadMult * tb;
   }
   return result;
 }
@@ -1030,6 +1168,9 @@ function parseTSVLines(tsvText, baseSeason, baseWeek, squadTag) {
     const gradSeason = Math.floor(gradTotalWeeks / 15);
     const gradWeek = gradTotalWeeks % 15;
 
+    // Skip placeholder / header rows that slipped through (e.g. "firstnames surname", age=0)
+    if (!first || !last || first === 'firstnames' || last === 'surname' || isNaN(age) || age === 0) continue;
+
     const p = {
       id: (cols[idx('player-id')] || name).trim(),
       name, age, ageweeks,
@@ -1072,6 +1213,8 @@ function loadInitialData() {
     try {
       const obj = JSON.parse(saved);
       if (obj && Array.isArray(obj.players) && obj.players.length > 0) {
+        // Strip any ghost/placeholder players that may have been saved by earlier versions
+        obj.players = obj.players.filter(p => p.name && p.name !== 'firstnames surname' && p.age > 0 && p.id !== 'player-id');
         state = obj;
         document.getElementById('seasonBadge').textContent = `Baseline: Season ${state.season}, Week ${state.week}`;
         return;
@@ -1944,7 +2087,7 @@ function parseTrainingLog() {
 
   for (const [sk, info] of Object.entries(latest)) {
     const floor = SUBLEVELS_AT[info.newLevel];
-    const ceiling = info.newLevel < 15 ? SUBLEVELS_AT[info.newLevel + 1] - 1 : 1749;
+    const ceiling = info.newLevel < 15 ? SUBLEVELS_AT[info.newLevel + 1] - 1 : 17499;
     const weeksAgo = Math.max(0, Math.floor((now - info.date) / MS_PER_WEEK));
     // Store floor + small progress estimate. We don't know exact training, so
     // add weeksAgo * 50 as a rough average gain across all training types
@@ -2021,7 +2164,7 @@ function calcProjection() {
     if (plannerSubLevelOffsets[k] !== undefined) {
       // Validate: offset must be within the range of the stated skill level
       const lo = SUBLEVELS_AT[Math.min(15, Math.max(0, v))];
-      const hi = v < 15 ? SUBLEVELS_AT[v + 1] - 1 : 1749;
+      const hi = v < 15 ? SUBLEVELS_AT[v + 1] - 1 : 17499;
       sub[k] = Math.min(hi, Math.max(lo, plannerSubLevelOffsets[k]));
     } else {
       sub[k] = skillToSublevels(v);
@@ -2255,7 +2398,7 @@ function renderProjection(snapshots, startSkills, levelUps, youthEndIdx) {
       const sl = plannerSubLevelOffsets[sk];
       const intLevel = parseInt(document.getElementById(`sk_${sk}`)?.value) || 0;
       const lo = SUBLEVELS_AT[Math.min(15, intLevel)];
-      const hi = intLevel < 15 ? SUBLEVELS_AT[intLevel + 1] - 1 : 1749;
+      const hi = intLevel < 15 ? SUBLEVELS_AT[intLevel + 1] - 1 : 17499;
       const pct = Math.round(((sl - lo) / (hi - lo)) * 100);
       return `${skillNames2[sk] || sk}: ${sl.toLocaleString()} (${pct}% through level)`;
     });
