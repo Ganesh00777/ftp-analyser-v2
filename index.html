@@ -684,9 +684,9 @@
               <button style="padding:4px 10px;font-size:0.78rem;" onclick="fillYouthAge()">Apply to Age</button>
               <span style="color:var(--muted);font-size:0.72rem;">│</span>
               <label style="font-size:0.78rem;color:var(--muted);">Weeks:</label>
-              <input type="number" id="youthWkFrom" min="1" max="15" value="1" style="width:46px;font-size:0.78rem;" title="From week">
+              <input type="number" id="youthWkFrom" min="1" max="15" value="1" style="width:52px;font-size:0.78rem;" title="From week">
               <span style="font-size:0.78rem;color:var(--muted);">–</span>
-              <input type="number" id="youthWkTo" min="1" max="15" value="15" style="width:46px;font-size:0.78rem;" title="To week">
+              <input type="number" id="youthWkTo" min="1" max="15" value="15" style="width:52px;font-size:0.78rem;" title="To week">
               <select id="youthWkAge" style="font-size:0.78rem;padding:4px 8px;">
                 <option value="all">All ages</option>
                 <option value="16">Age 16</option><option value="17">Age 17</option>
@@ -741,9 +741,9 @@
               <button style="padding:4px 10px;font-size:0.78rem;" onclick="fillSeniorAge()">Apply to Age</button>
               <span style="color:var(--muted);font-size:0.72rem;">│</span>
               <label style="font-size:0.78rem;color:var(--muted);">Weeks:</label>
-              <input type="number" id="seniorWkFrom" min="1" max="15" value="1" style="width:46px;font-size:0.78rem;" title="From week">
+              <input type="number" id="seniorWkFrom" min="1" max="15" value="1" style="width:52px;font-size:0.78rem;" title="From week">
               <span style="font-size:0.78rem;color:var(--muted);">–</span>
-              <input type="number" id="seniorWkTo" min="1" max="15" value="15" style="width:46px;font-size:0.78rem;" title="To week">
+              <input type="number" id="seniorWkTo" min="1" max="15" value="15" style="width:52px;font-size:0.78rem;" title="To week">
               <select id="seniorWkAge" style="font-size:0.78rem;padding:4px 8px;">
                 <option value="all">All ages</option>
                 <option value="21">Age 21</option><option value="22">Age 22</option><option value="23">Age 23</option>
@@ -1677,13 +1677,13 @@ function renderTables() {
         <td><strong>${p.gradSeasonWeek}</strong></td>
         <td>${p.rating.toLocaleString()}</td>
         <td>$${p.wage.toLocaleString()}</td>
-        <td class="${skillClass(p.bat, true)}">${p.bat}</td>
-        <td class="${skillClass(p.bowl, true)}">${p.bowl}</td>
-        <td class="${skillClass(p.tech, true)}">${p.tech}</td>
-        <td class="${skillClass(p.keep, true)}">${p.keep}</td>
-        <td class="${skillClass(p.field, true)}">${p.field}</td>
-        <td class="${skillClass(p.end, true)}">${p.end}</td>
-        <td class="${skillClass(p.pow, true)}">${p.pow}</td>
+        <td class="${skillClass(p.bat, true)}">${p.bat}<br><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">${skillLabel(p.bat)}</span></td>
+        <td class="${skillClass(p.bowl, true)}">${p.bowl}<br><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">${skillLabel(p.bowl)}</span></td>
+        <td class="${skillClass(p.tech, true)}">${p.tech}<br><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">${skillLabel(p.tech)}</span></td>
+        <td class="${skillClass(p.keep, true)}">${p.keep}<br><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">${skillLabel(p.keep)}</span></td>
+        <td class="${skillClass(p.field, true)}">${p.field}<br><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">${skillLabel(p.field)}</span></td>
+        <td class="${skillClass(p.end, true)}">${p.end}<br><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">${skillLabel(p.end)}</span></td>
+        <td class="${skillClass(p.pow, true)}">${p.pow}<br><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">${skillLabel(p.pow)}</span></td>
         <td style="font-size:0.8rem;">${talents}</td>
         <td>
           <select class="verdict-select" onchange="updateVerdict('${p.id}', this.value)">
@@ -1727,13 +1727,13 @@ function renderTables() {
         <td>${p.age}.${p.ageweeks}</td>
         <td>${p.rating.toLocaleString()}</td>
         <td>$${p.wage.toLocaleString()}</td>
-        <td class="${skillClass(p.bat, false)}">${p.bat}</td>
-        <td class="${skillClass(p.bowl, false)}">${p.bowl}</td>
-        <td class="${skillClass(p.tech, false)}">${p.tech}</td>
-        <td class="${skillClass(p.keep, false)}">${p.keep}</td>
-        <td class="${skillClass(p.field, false)}">${p.field}</td>
-        <td class="${skillClass(p.end, false)}">${p.end}</td>
-        <td class="${skillClass(p.pow, false)}">${p.pow}</td>
+        <td class="${skillClass(p.bat, false)}">${p.bat}<br><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">${skillLabel(p.bat)}</span></td>
+        <td class="${skillClass(p.bowl, false)}">${p.bowl}<br><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">${skillLabel(p.bowl)}</span></td>
+        <td class="${skillClass(p.tech, false)}">${p.tech}<br><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">${skillLabel(p.tech)}</span></td>
+        <td class="${skillClass(p.keep, false)}">${p.keep}<br><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">${skillLabel(p.keep)}</span></td>
+        <td class="${skillClass(p.field, false)}">${p.field}<br><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">${skillLabel(p.field)}</span></td>
+        <td class="${skillClass(p.end, false)}">${p.end}<br><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">${skillLabel(p.end)}</span></td>
+        <td class="${skillClass(p.pow, false)}">${p.pow}<br><span style="font-size:0.65rem;color:var(--muted);font-weight:400;">${skillLabel(p.pow)}</span></td>
         <td>${p.exp}</td>
         <td>${p.cap}</td>
         <td style="font-size:0.8rem;">${talents}</td>
