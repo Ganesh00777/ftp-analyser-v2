@@ -1,0 +1,3000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>From the Pavilion — Local Squad & Academy Analyzer</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface-hover: #273549;
+    --border: #334155;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --accent: #10b981;
+    --accent-hover: #059669;
+    --blue: #3b82f6;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --purple: #a855f7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 20px;
+  }
+  .container { max-width: 1440px; margin: 0 auto; }
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  h1 { font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  .badge-season {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--accent);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    font-size: 0.78rem;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  button {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  button:hover { background: var(--surface-hover); border-color: #475569; }
+  button.primary { background: var(--accent); color: #052e16; border-color: var(--accent); }
+  button.primary:hover { background: var(--accent-hover); }
+  button.blue { background: var(--blue); color: #fff; border-color: var(--blue); }
+  button.blue:hover { opacity: 0.9; }
+  button.amber { background: var(--amber); color: #1c1917; border-color: var(--amber); }
+  button.amber:hover { opacity: 0.9; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .stat-label { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-value { font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
+  .stat-sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .tab {
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .tab.active {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+  input[type="text"], input[type="number"], select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    outline: none;
+  }
+  input[type="text"]:focus, input[type="number"]:focus, select:focus { border-color: var(--accent); }
+  input[type="text"] { min-width: 220px; }
+
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+    text-align: left;
+  }
+  th {
+    background: #162032;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  th:hover { color: var(--text); }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+    white-space: nowrap;
+  }
+  tr:hover td { background: rgba(255, 255, 255, 0.02); }
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+  .pill-keep { background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); }
+  .pill-sell { background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
+  .pill-watch { background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); }
+  .pill-core { background: rgba(59, 130, 246, 0.18); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35); }
+  .pill-prodigy { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); }
+
+  .skill-hi { color: #34d399; font-weight: 700; }
+  .skill-mid { color: #e2e8f0; }
+  .skill-lo { color: #64748b; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .import-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  textarea {
+    width: 100%;
+    height: 220px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    margin: 12px 0;
+  }
+  .xi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+    gap: 20px;
+  }
+  .xi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .xi-card h3 { margin-bottom: 12px; font-size: 1.05rem; color: var(--accent); }
+  .xi-list { list-style: none; }
+  .xi-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(51,65,85,0.4);
+    font-size: 0.86rem;
+  }
+  .xi-list li:last-child { border-bottom: none; }
+  .verdict-select {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 6px;
+    font-size: 0.78rem;
+  }
+
+  /* ── Training Planner ── */
+  .planner-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+    align-items: start;
+    min-width: 0;
+  }
+  .planner-layout > div {
+    min-width: 0;
+  }
+  @media (max-width: 900px) { .planner-layout { grid-template-columns: 1fr; } }
+  .planner-sidebar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    position: sticky;
+    top: 16px;
+  }
+  .planner-sidebar h3 { color: var(--accent); font-size: 1rem; margin-bottom: 14px; }
+  .form-row { margin-bottom: 10px; }
+  .form-row label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .form-row select, .form-row input { width: 100%; }
+  .skill-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .skill-input-item label { font-size: 0.74rem; color: var(--muted); display: block; margin-bottom: 2px; }
+  .skill-input-item input { width: 100%; padding: 5px 8px; }
+  .planner-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; overflow: hidden; }
+  .planner-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .planner-card h3 { font-size: 0.95rem; color: var(--accent); margin-bottom: 14px; }
+  .week-grid {
+    display: grid;
+    gap: 6px;
+  }
+  .senior-scroll-wrap {
+    overflow-x: auto;
+    width: 100%;
+  }
+  .senior-scroll-inner {
+    min-width: max-content;
+  }
+  /* ── Schedule grid shared layout ── */
+  .week-grid {
+    display: table;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 4px;
+  }
+  .week-row {
+    display: table-row;
+  }
+  .week-row > * {
+    display: table-cell;
+    vertical-align: middle;
+    padding: 0 4px 0 0;
+  }
+  .week-label {
+    white-space: nowrap;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 600;
+    padding-right: 8px !important;
+    width: 52px;
+  }
+  /* cells inside week-row that hold a select */
+  .week-cell {
+    width: 140px;
+    min-width: 110px;
+  }
+  .week-cell select,
+  .week-cell-acad select {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .week-cell-acad {
+    width: 140px;
+    min-width: 110px;
+  }
+  /* age header row */
+  .age-header {
+    display: table;
+    width: 100%;
+    margin-bottom: 2px;
+  }
+  .age-header-row {
+    display: table-row;
+  }
+  .age-header-spacer {
+    display: table-cell;
+    width: 52px;
+  }
+  .age-header-cell {
+    display: table-cell;
+    width: 140px;
+    min-width: 110px;
+    font-size: 0.74rem;
+    color: var(--muted);
+    text-align: center;
+    font-weight: 600;
+    padding-bottom: 4px;
+  }
+  /* senior grid cell */
+  .week-row .senior-cell {
+    display: table-cell;
+    width: 140px;
+    min-width: 110px;
+    vertical-align: middle;
+    padding-right: 4px;
+  }
+  .week-row .senior-cell select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 4px 6px;
+    font-size: 0.78rem;
+  }
+  .proj-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  .proj-table th { background: #162032; color: var(--muted); padding: 8px 10px; text-align: left; font-weight: 600; }
+  .proj-table td { padding: 8px 10px; border-bottom: 1px solid rgba(51,65,85,0.5); }
+  .proj-table tr:last-child td { border-bottom: none; }
+  .skill-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .skill-bar { height: 6px; border-radius: 3px; background: var(--border); flex: 1; overflow: hidden; }
+  .skill-bar-fill { height: 100%; border-radius: 3px; background: var(--accent); transition: width 0.3s; }
+  .delta-pos { color: #34d399; font-weight: 700; }
+  .delta-neg { color: #f87171; }
+  .delta-zero { color: var(--muted); }
+  .proj-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .proj-mini {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .proj-mini .label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .proj-mini .val { font-size: 1.1rem; font-weight: 700; margin-top: 2px; }
+  .proj-mini .sub { font-size: 0.72rem; color: var(--muted); }
+  .planner-player-select { margin-bottom: 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .planner-player-select select { flex: 1; min-width: 200px; }
+  .help-text { font-size: 0.78rem; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+  .senior-week-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.84rem; }
+  .toggle-label { color: var(--muted); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1>🏏 From the Pavilion — Squad & Academy Analyzer <span class="badge-season" id="seasonBadge">Baseline: Season 67, Week 0</span></h1>
+      <p style="color: var(--muted); font-size: 0.84rem; margin-top: 4px;">Offline local analyzer • Auto-saves edits in your browser • Import updated TSV exports anytime • Supports numeric & labelled skill exports</p>
+    </div>
+    <div class="header-actions">
+      <button class="primary" onclick="exportCSV()">⬇ Export CSV</button>
+      <button onclick="resetDefaultData()">↺ Reset Default Squad</button>
+    </div>
+  </header>
+
+  <div class="stats-grid" id="statsGrid"></div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('youth', this)">Youth Academy & Graduation Roadmap</button>
+    <button class="tab" onclick="switchTab('senior', this)">Senior Squad Roster</button>
+    <button class="tab" onclick="switchTab('lineups', this)">📋 Recommended XI</button>
+    <button class="tab" onclick="switchTab('training', this)">🏋️ Training Planner</button>
+    <button class="tab" onclick="switchTab('analytics', this)">📊 Analytics</button>
+    <button class="tab" onclick="switchTab('import', this)">Paste / Import Game TSV</button>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:6px;padding:4px 0;">
+      <span style="font-size:0.74rem;color:var(--muted);white-space:nowrap;">Squad:</span>
+      <select id="globalSquadFilter" onchange="renderStats(); renderTables(); populatePlannerSelect(); renderLineups();" style="font-size:0.78rem;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--fg);">
+        <option value="ALL">⚡ All</option>
+        <option value="main">🏠 Main</option>
+        <option value="affiliate">🟡 Affiliate</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- YOUTH PANEL -->
+  <div id="panel-youth" class="panel active">
+    <div class="controls">
+      <input type="text" id="youthSearch" placeholder="Search name, talent, bowler type..." oninput="renderTables()">
+      <select id="youthSeasonFilter" onchange="renderTables()">
+        <option value="ALL">All Graduation Seasons</option>
+        <option value="S67">Season 67 (Current)</option>
+        <option value="S68">Season 68</option>
+        <option value="S69">Season 69</option>
+        <option value="S70">Season 70</option>
+        <option value="S71">Season 71</option>
+      </select>
+      <select id="youthVerdictFilter" onchange="renderTables()">
+        <option value="ALL">All Verdicts</option>
+        <option value="KEEP">Keep / Promote</option>
+        <option value="WATCH">Watch</option>
+        <option value="SELL">Sell</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table id="youthTable">
+        <thead>
+          <tr>
+            <th onclick="sortBy('youth', 'name')">Player</th>
+            <th onclick="sortBy('youth', 'ageNum')">Age</th>
+            <th onclick="sortBy('youth', 'weeksLeft')">Grad In</th>
+            <th onclick="sortBy('youth', 'gradSeasonWeek')">Season / Wk</th>
+            <th onclick="sortBy('youth', 'rating')">Rating</th>
+            <th onclick="sortBy('youth', 'wage')">Wage</th>
+            <th onclick="sortBy('youth', 'bat')">Bat</th>
+            <th onclick="sortBy('youth', 'bowl')">Bowl</th>
+            <th onclick="sortBy('youth', 'tech')">Tech</th>
+            <th onclick="sortBy('youth', 'keep')">Keep</th>
+            <th onclick="sortBy('youth', 'field')">Field</th>
+            <th onclick="sortBy('youth', 'end')">End</th>
+            <th onclick="sortBy('youth', 'pow')">Pow</th>
+            <th>Type & Talents</th>
+            <th onclick="sortBy('youth', 'verdict')">Verdict</th>
+            <th>Plan</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SENIOR PANEL -->
+  <div id="panel-senior" class="panel">
+    <div class="controls">
+      <input type="text" id="seniorSearch" placeholder="Search senior player, talent, type..." oninput="renderTables()">
+      <select id="seniorRoleFilter" onchange="renderTables()">
+        <option value="ALL">All Roles</option>
+        <option value="BAT">Batters (Bat ≥ 9)</option>
+        <option value="BOWL">Bowlers (Bowl ≥ 9)</option>
+        <option value="AR">All-Rounders (Bat ≥ 9 & Bowl ≥ 9)</option>
+        <option value="WK">Keepers (Keep ≥ 10)</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table id="seniorTable">
+        <thead>
+          <tr>
+            <th onclick="sortBy('senior', 'name')">Player</th>
+            <th onclick="sortBy('senior', 'ageNum')">Age</th>
+            <th onclick="sortBy('senior', 'rating')">Rating</th>
+            <th onclick="sortBy('senior', 'wage')">Wage</th>
+            <th onclick="sortBy('senior', 'bat')">Bat</th>
+            <th onclick="sortBy('senior', 'bowl')">Bowl</th>
+            <th onclick="sortBy('senior', 'tech')">Tech</th>
+            <th onclick="sortBy('senior', 'keep')">Keep</th>
+            <th onclick="sortBy('senior', 'field')">Field</th>
+            <th onclick="sortBy('senior', 'end')">End</th>
+            <th onclick="sortBy('senior', 'pow')">Pow</th>
+            <th onclick="sortBy('senior', 'exp')">Exp</th>
+            <th onclick="sortBy('senior', 'cap')">Cap</th>
+            <th>Type & Talents</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- LINEUPS PANEL -->
+  <div id="panel-lineups" class="panel">
+    <div id="lineupContent"><!-- rendered by renderLineups() --></div>
+  </div>
+
+  <!-- TRAINING PLANNER PANEL -->
+  <div id="panel-training" class="panel">
+    <div class="planner-player-select">
+      <select id="plannerPlayerSelect" onchange="loadPlayerIntoPlanner()">
+        <option value="">— Select a player to plan training —</option>
+      </select>
+      <button class="amber" onclick="calcProjection()">🔮 Project Skills</button>
+      <button onclick="savePlannerState()">💾 Save Plan</button>
+      <button onclick="showCopyPlanModal()">📋 Copy Plan</button>
+      <button onclick="exportPlanAsText()">📤 Export Text</button>
+      <button onclick="showEfficiencyPanel()">⚡ Efficiency</button>
+      <button onclick="showBestTrainingPanel()">🎯 Best Training</button>
+      <button onclick="showGapFixPanel()" style="background:#7c3aed;color:#fff;border-color:#7c3aed;">🔧 Fix Skill Gaps</button>
+    </div>
+    <div class="planner-layout">
+      <div class="planner-sidebar">
+        <h3>⚙️ Player Setup</h3>
+        <div class="form-row">
+          <label>Main Squad Academy</label>
+          <select id="pAcademyMain">
+            <option value="minimal">Minimal (0)</option>
+            <option value="meagre">Meagre (1)</option>
+            <option value="inadequate">Inadequate (2)</option>
+            <option value="reasonable">Reasonable (3)</option>
+            <option value="satisfactory">Satisfactory (4)</option>
+            <option value="good">Good (5)</option>
+            <option value="excellent" selected>Excellent (6)</option>
+            <option value="superior">Superior (7)</option>
+            <option value="lavish">Lavish (8)</option>
+            <option value="luxurious">Luxurious (9)</option>
+            <option value="deluxe">Deluxe (10)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Affiliate Squad Academy</label>
+          <select id="pAcademyAffiliate">
+            <option value="minimal">Minimal (0)</option>
+            <option value="meagre">Meagre (1)</option>
+            <option value="inadequate">Inadequate (2)</option>
+            <option value="reasonable">Reasonable (3)</option>
+            <option value="satisfactory">Satisfactory (4)</option>
+            <option value="good" selected>Good (5)</option>
+            <option value="excellent">Excellent (6)</option>
+            <option value="superior">Superior (7)</option>
+            <option value="lavish">Lavish (8)</option>
+            <option value="luxurious">Luxurious (9)</option>
+            <option value="deluxe">Deluxe (10)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Training Talent</label>
+          <select id="pTalent">
+            <option value="None">None</option>
+            <option value="Prodigy">Prodigy</option>
+            <option value="Gifted (Batting)">Gifted (Batting)</option>
+            <option value="Gifted (Bowling)">Gifted (Bowling)</option>
+            <option value="Gifted (Technique)">Gifted (Technique)</option>
+            <option value="Gifted (Keeping)">Gifted (Keeping)</option>
+            <option value="Gifted (Fielding)">Gifted (Fielding)</option>
+            <option value="Gifted (Endurance)">Gifted (Endurance)</option>
+            <option value="Gifted (Power)">Gifted (Power)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Current Age (years)</label>
+          <input type="number" id="pAge" value="17" min="16" max="30" step="1">
+        </div>
+        <div class="form-row">
+          <label>Current Age (weeks, 0–14)</label>
+          <input type="number" id="pAgeWeeks" value="0" min="0" max="14" step="1">
+        </div>
+        <div class="form-row">
+          <label>Is Youth Player?</label>
+          <select id="pIsYouth">
+            <option value="1">Yes — still in academy</option>
+            <option value="0">No — senior squad</option>
+          </select>
+        </div>
+        <p style="font-size:0.78rem;color:var(--muted);margin:10px 0 6px;">Current Skill Levels (integer 0–15)</p>
+        <div class="skill-inputs">
+          <div class="skill-input-item"><label>Batting</label><input type="number" id="sk_bat" value="5" min="0" max="15"></div>
+          <div class="skill-input-item"><label>Bowling</label><input type="number" id="sk_bowl" value="5" min="0" max="15"></div>
+          <div class="skill-input-item"><label>Technique</label><input type="number" id="sk_tech" value="5" min="0" max="15"></div>
+          <div class="skill-input-item"><label>Keeping</label><input type="number" id="sk_keep" value="1" min="0" max="15"></div>
+          <div class="skill-input-item"><label>Fielding</label><input type="number" id="sk_field" value="5" min="0" max="15"></div>
+          <div class="skill-input-item"><label>Endurance</label><input type="number" id="sk_end" value="4" min="0" max="15"></div>
+          <div class="skill-input-item"><label>Power</label><input type="number" id="sk_pow" value="3" min="0" max="15"></div>
+        </div>
+        <p class="help-text">
+          Select a player above to auto-fill, or enter manually. Set the weekly training schedule on the right, then click <strong>Project Skills</strong>.
+        </p>
+
+        <!-- Training Log Import -->
+        <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <p style="margin:0;font-size:0.78rem;color:var(--muted);">📋 Paste Training Log <span style="font-size:0.7rem;opacity:0.7;">(optional — improves sub-level accuracy)</span></p>
+            <button onclick="parseTrainingLog()" style="font-size:0.74rem;padding:3px 10px;">Import Log</button>
+          </div>
+          <textarea id="trainingLogInput" rows="4" placeholder="Paste lines like:&#10;26 Oct 26 04:57	Keeping increased from capable to reliable during training&#10;07 Sep 26 04:57	Keeping increased from reasonable to capable during training&#10;..." style="width:100%;font-size:0.72rem;font-family:monospace;padding:6px;box-sizing:border-box;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;resize:vertical;"></textarea>
+          <div id="trainingLogStatus" style="font-size:0.72rem;color:var(--accent);margin-top:4px;min-height:1.2em;"></div>
+        </div>
+      </div>
+
+      <div class="planner-main">
+        <!-- Youth weeks -->
+        <div class="planner-card" id="youthScheduleCard">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+            <h3 style="margin:0;">🎓 Youth Schedule (each age column = one full season of 15 weeks)</h3>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <label style="font-size:0.78rem;color:var(--muted);">Fill all weeks:</label>
+              <select id="youthFillType" style="font-size:0.78rem;padding:4px 8px;">
+                <option value="Batting">Batting</option>
+                <option value="Batting-Tech">Batting-Tech</option>
+                <option value="Bowling">Bowling</option>
+                <option value="Bowling-Tech">Bowling-Tech</option>
+                <option value="All-Rounder">All-Rounder</option>
+                <option value="Keeping">Keeping</option>
+                <option value="Keeper-Batsman">Keeper-Batsman</option>
+                <option value="Fielding">Fielding</option>
+                <option value="Fitness">Fitness</option>
+                <option value="Strength">Strength</option>
+                <option value="Rest">Rest</option>
+              </select>
+              <button style="padding:4px 10px;font-size:0.78rem;" onclick="fillAllYouth()">Apply to All</button>
+              <select id="youthFillAge" style="font-size:0.78rem;padding:4px 8px;">
+                <option value="all">All ages</option>
+                <option value="16">Age 16 only</option>
+                <option value="17">Age 17 only</option>
+                <option value="18">Age 18 only</option>
+                <option value="19">Age 19 only</option>
+                <option value="20">Age 20 only</option>
+              </select>
+              <button style="padding:4px 10px;font-size:0.78rem;" onclick="fillYouthAge()">Apply to Age</button>
+            </div>
+          </div>
+          <div id="youthScheduleGrid"></div>
+        </div>
+        <!-- Senior weeks -->
+        <div class="planner-card" id="seniorScheduleCard">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+            <h3 style="margin:0;cursor:pointer;" onclick="toggleSeniorSchedule()" title="Click to collapse/expand">👔 Senior Schedule <span id="seniorToggleIcon" style="font-size:0.8rem;color:var(--muted);">▼</span></h3>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <label style="font-size:0.78rem;color:var(--muted);">Seasons:</label>
+              <input type="number" id="seniorSeasons" value="10" min="1" max="15" style="width:55px;" onchange="buildSeniorGrid()">
+              <label style="font-size:0.78rem;color:var(--muted);">Fill all weeks:</label>
+              <select id="seniorFillType" style="font-size:0.78rem;padding:4px 8px;">
+                <option value="Batting">Batting</option>
+                <option value="Batting-Tech">Batting-Tech</option>
+                <option value="Bowling">Bowling</option>
+                <option value="Bowling-Tech">Bowling-Tech</option>
+                <option value="All-Rounder">All-Rounder</option>
+                <option value="Keeping">Keeping</option>
+                <option value="Keeper-Batsman">Keeper-Batsman</option>
+                <option value="Fielding">Fielding</option>
+                <option value="Fitness">Fitness</option>
+                <option value="Strength">Strength</option>
+                <option value="Rest">Rest</option>
+              </select>
+              <button style="padding:4px 10px;font-size:0.78rem;" onclick="fillAllSenior()">Apply to All</button>
+              <select id="seniorFillAge" style="font-size:0.78rem;padding:4px 8px;">
+                <option value="all">All ages</option>
+                <option value="21">Age 21 only</option>
+                <option value="22">Age 22 only</option>
+                <option value="23">Age 23 only</option>
+                <option value="24">Age 24 only</option>
+                <option value="25">Age 25 only</option>
+                <option value="26">Age 26 only</option>
+                <option value="27">Age 27 only</option>
+                <option value="28">Age 28 only</option>
+                <option value="29">Age 29 only</option>
+                <option value="30">Age 30 only</option>
+                <option value="31">Age 31 only</option>
+                <option value="32">Age 32 only</option>
+                <option value="33">Age 33 only</option>
+                <option value="34">Age 34 only</option>
+                <option value="35">Age 35 only</option>
+              </select>
+              <button style="padding:4px 10px;font-size:0.78rem;" onclick="fillSeniorAge()">Apply to Age</button>
+            </div>
+          </div>
+          <div id="seniorScheduleBody">
+            <div id="seniorScheduleGrid"></div>
+          </div>
+        </div>
+        <!-- Projection output -->
+        <div class="planner-card" id="projCard" style="display:none;">
+          <h3>📊 Skill Projection Results</h3>
+          <div id="projOutput"></div>
+        </div>
+        <!-- Efficiency / Best Training panel -->
+        <div class="planner-card" id="plannerToolCard" style="display:none;">
+          <div id="plannerToolOutput"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS PANEL -->
+  <div id="panel-analytics" class="panel">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+      <button onclick="renderAnalytics('radar')" class="amber">🕸 Radar Chart</button>
+      <button onclick="renderAnalytics('age')" class="amber">📅 Age Curve</button>
+      <button onclick="renderAnalytics('timeline')" class="amber">📈 Training Timeline</button>
+      <button onclick="renderAnalytics('compare')" class="amber">⚖️ Compare Players</button>
+      <button onclick="renderAnalytics('wage')" class="amber">💰 Wage Budget</button>
+      <button onclick="renderAnalytics('history')" class="amber">🗂 Squad History</button>
+    </div>
+    <div id="analyticsContent" style="min-height:300px;"></div>
+  </div>
+
+  <!-- IMPORT PANEL -->
+  <div id="panel-import" class="panel">
+    <div class="import-box">
+      <h3 style="margin-bottom: 6px;">Import Updated From the Pavilion TSV Data</h3>
+      <p style="color: var(--muted); font-size: 0.85rem;">
+        Paste the raw tab-separated export directly from From the Pavilion (including the header row starting with <code>team-id</code>). Supports both <strong>numeric</strong> and <strong>labelled</strong> skill values (e.g. "outstanding" = 10). You can paste Senior, Youth, or both together.
+      </p>
+      <div style="margin-top: 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <label style="font-size: 0.85rem; color: var(--muted);">Current Season:
+          <input type="number" id="impSeason" value="67" style="width: 70px;">
+        </label>
+        <label style="font-size: 0.85rem; color: var(--muted);">Current Week (0–14):
+          <input type="number" id="impWeek" value="0" min="0" max="14" style="width: 70px;">
+        </label>
+        <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+          <input type="checkbox" id="impIsAffiliate" style="width:16px;height:16px;">
+          <span>This is an <strong style="color:#f59e0b;">Affiliate</strong> squad export</span>
+        </label>
+      </div>
+      <textarea id="tsvInput" placeholder="team-id&#9;player-id&#9;firstnames&#9;surname&#9;age&#9;ageweeks..."></textarea>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="primary" onclick="importTSV(false)">Replace Roster with Pasted Data</button>
+        <button class="blue" onclick="importTSV(true)">Merge / Update Existing Roster</button>
+      </div>
+      <p style="font-size:0.78rem;color:var(--muted);margin-top:8px;">Tick the checkbox before importing your affiliate squad export — players will be tagged <strong style="color:#f59e0b;">Affiliate</strong> and shown separately in tables and the training planner.</p>
+      <p id="importStatus" style="margin-top: 10px; font-size: 0.84rem; color: var(--accent);"></p>
+    </div>
+
+    <!-- Export / Import State -->
+    <div class="import-box" style="margin-top:16px;">
+      <h3 style="margin-bottom:6px;">📱 Sync to Another Device</h3>
+      <p style="color:var(--muted);font-size:0.85rem;">Export your full squad + training plans as a code, then paste it on any other device (phone, laptop) to restore everything instantly.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+        <button class="primary" onclick="exportState()">📤 Export My Data</button>
+        <button class="blue" onclick="document.getElementById('stateImportArea').style.display='';">📥 Import on This Device</button>
+      </div>
+      <div id="stateExportArea" style="display:none;margin-top:12px;">
+        <p style="font-size:0.78rem;color:var(--muted);margin-bottom:6px;">Copy everything below and paste it on your other device:</p>
+        <textarea id="stateExportText" rows="5" readonly style="width:100%;font-family:monospace;font-size:0.72rem;background:#0f172a;color:#34d399;border:1px solid #34d399;border-radius:6px;padding:8px;box-sizing:border-box;"></textarea>
+        <button style="margin-top:6px;" onclick="navigator.clipboard.writeText(document.getElementById('stateExportText').value).then(()=>this.textContent='✅ Copied!')">📋 Copy to Clipboard</button>
+      </div>
+      <div id="stateImportArea" style="display:none;margin-top:12px;">
+        <p style="font-size:0.78rem;color:var(--muted);margin-bottom:6px;">Paste your exported data here:</p>
+        <textarea id="stateImportText" rows="5" placeholder="Paste exported data here..." style="width:100%;font-family:monospace;font-size:0.72rem;background:#0f172a;color:#94a3b8;border:1px solid var(--border);border-radius:6px;padding:8px;box-sizing:border-box;"></textarea>
+        <button class="primary" style="margin-top:6px;" onclick="importState()">✅ Load Data</button>
+        <p id="stateImportStatus" style="font-size:0.78rem;margin-top:6px;"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// SKILL LABEL ↔ NUMBER MAPPING
+// ═══════════════════════════════════════════════════════════════
+const SKILL_LABEL_MAP = {
+  'atrocious': 0, 'dreadful': 1, 'poor': 2, 'ordinary': 3,
+  'average': 4, 'reasonable': 5, 'capable': 6, 'reliable': 7,
+  'accomplished': 8, 'expert': 9, 'outstanding': 10,
+  'spectacular': 11, 'exceptional': 12, 'world class': 13,
+  'elite': 14, 'legendary': 15
+};
+const SKILL_NUM_MAP = Object.fromEntries(Object.entries(SKILL_LABEL_MAP).map(([k,v])=>[v,k]));
+
+function parseSkillVal(raw) {
+  if (raw === undefined || raw === null || raw === '') return 0;
+  const s = String(raw).trim().toLowerCase();
+  if (s in SKILL_LABEL_MAP) return SKILL_LABEL_MAP[s];
+  const n = parseInt(s, 10);
+  return isNaN(n) ? 0 : n;
+}
+function skillLabel(n) { return SKILL_NUM_MAP[Math.min(15, Math.max(0, Math.round(n)))] || '?'; }
+
+// ═══════════════════════════════════════════════════════════════
+// TRAINING GAIN DATABASE
+// Per-age sub-level gains for each skill under each training type.
+// Source: FTP_Training_5.4.xlsx DB sheet.
+// Keys: academy (deluxe/luxurious/lavish/excellent/superior/good/…),
+//       talent (None/Prodigy/Gifted (Batting)/…), training type, age 16-20
+// We embed a simplified lookup: for each (academy, talent, training) combo
+// we store [End, Bat, Bowl, Tech, Pow, Keep, Field] gains per age group.
+// Ages 16-20 each have distinct multipliers baked into the reference sheet.
+// For youth we interpolate by age; for senior (age 21+) gains decay.
+// ═══════════════════════════════════════════════════════════════
+
+// Training types and which skills they primarily affect
+const TRAINING_SKILLS = {
+  'Batting':        { bat: 1.0, tech: 0.6, end: 0.2 },
+  'Batting-Tech':   { bat: 0.65, tech: 1.0, end: 0.2 },
+  'Bowling':        { bowl: 1.0, tech: 0.6, end: 0.2 },
+  'Bowling-Tech':   { bowl: 0.65, tech: 1.0, end: 0.2 },
+  'All-Rounder':    { bat: 0.5, bowl: 0.5, tech: 0.45, end: 0.2 },
+  'Keeping':        { keep: 1.0, tech: 0.6, field: 0.25, end: 0.2 },
+  'Keeper-Batsman': { bat: 0.6, keep: 0.8, tech: 0.6, field: 0.2, end: 0.2 },
+  'Fielding':       { field: 1.0, tech: 0.3, end: 0.2 },
+  'Fitness':        { end: 1.0, pow: 0.25 },
+  'Strength':       { end: 0.5, pow: 1.0 },
+  'Rest':           {}
+};
+
+// Academy multiplier (index 0=minimal … 10=deluxe)
+const ACADEMY_MULT = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
+const ACADEMY_NAMES = ['minimal','meagre','inadequate','reasonable','satisfactory','good','excellent','superior','lavish','luxurious','deluxe'];
+
+// Base sub-level gains per training week at age 19 (baseline), outstanding academy, no talent
+// (extracted from DB sheet row outstanding-None-* at age 19)
+const BASE_GAIN = {
+  'Batting':        { bat: 97, tech: 71, end: 32 },
+  'Batting-Tech':   { bat: 71, tech: 110, end: 32 },
+  'Bowling':        { bowl: 97, tech: 71, end: 32 },
+  'Bowling-Tech':   { bowl: 71, tech: 110, end: 32 },
+  'All-Rounder':    { bat: 68, bowl: 68, tech: 59, end: 32 },
+  'Keeping':        { keep: 208, tech: 71, field: 52, end: 32 },
+  'Keeper-Batsman': { bat: 78, keep: 104, tech: 71, field: 39, end: 32 },
+  'Fielding':       { field: 286, tech: 39, end: 32 },
+  'Fitness':        { end: 260, pow: 72 },
+  'Strength':       { end: 84, pow: 197 },
+  'Rest':           {}
+};
+
+// Age multipliers (from DB sheet — ratio of age col to age-19 col for batting at outstanding/None/Batting)
+// Age:   16    17    18    19    20    (21+ senior decay applied separately)
+const AGE_MULT = { 16: 1.21, 17: 1.16, 18: 1.11, 19: 1.0, 20: 0.93 };
+
+// Talent multipliers — apply to the primary trained skill(s)
+const TALENT_BOOST = {
+  'None': {},
+  'Prodigy': { bat: 1.2, bowl: 1.2, tech: 1.2, keep: 1.2, field: 1.2, end: 1.2, pow: 1.2 },
+  'Gifted (Batting)': { bat: 1.2 },
+  'Gifted (Bowling)': { bowl: 1.2 },
+  'Gifted (Technique)': { tech: 1.2 },
+  'Gifted (Keeping)': { keep: 1.2 },
+  'Gifted (Fielding)': { field: 1.2 },
+  'Gifted (Endurance)': { end: 1.2 },
+  'Gifted (Power)': { pow: 1.2 }
+};
+
+// Senior age decay: gain per week = youth_gain * decay
+// Ages 21-29: flat 1.0 (players still improve), 30+: endurance doubles loss
+// In this simplified model we apply a mild age taper for 21+
+function seniorAgeMult(age) {
+  if (age < 21) return 1.0;
+  if (age <= 25) return 0.85;
+  if (age <= 28) return 0.70;
+  if (age <= 30) return 0.55;
+  return 0.0; // 31+ skills decline — handled as negative
+}
+
+// Sub-levels per integer skill level (cumulative from DB Form-Exp summary)
+const SUBLEVELS_AT = [0, 999, 1999, 2999, 3999, 4999, 5999, 6999, 7999, 8999, 9999, 11499, 12999, 14499, 15999, 17499];
+
+function sublevelsToSkill(sublevels) {
+  for (let i = SUBLEVELS_AT.length - 1; i >= 0; i--) {
+    if (sublevels >= SUBLEVELS_AT[i]) return i;
+  }
+  return 0;
+}
+
+function skillToSublevels(skillInt) {
+  const idx = Math.min(15, Math.max(0, skillInt));
+  const lo = SUBLEVELS_AT[idx];
+  const hi = idx < 15 ? SUBLEVELS_AT[idx + 1] - 1 : 17499;
+  return Math.floor((lo + hi) / 2); // midpoint — prevents rounding from dropping back a level
+}
+
+// Compute gain for one training week
+function weekGain(trainingType, academy, talent, age) {
+  const base = BASE_GAIN[trainingType];
+  if (!base) return {};
+  const acadIdx = ACADEMY_NAMES.indexOf(academy);
+  const acadMult = acadIdx >= 0 ? ACADEMY_MULT[acadIdx] : 1.0;
+  const ageClamp = Math.min(20, Math.max(16, age));
+  const ageMult = age >= 21 ? seniorAgeMult(age) : (AGE_MULT[ageClamp] || 1.0);
+  const talBoost = TALENT_BOOST[talent] || {};
+  const result = {};
+  for (const [skill, gain] of Object.entries(base)) {
+    const tb = talBoost[skill] || 1.0;
+    result[skill] = gain * acadMult * ageMult * tb;
+  }
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DEFAULT DATA
+// ═══════════════════════════════════════════════════════════════
+const DEFAULT_SENIOR_TSV = `team-id	player-id	firstnames	surname	age	ageweeks	wage	rating	endurance	technique	bowling	batting	power	keeping	fielding	experience	captaincy	form	fatigue	bat-right	bowl-right	bowler-type	shirt-number	training	youth	nationality	youth-promotion-date	youth-promotion-team	talent1	talent2
+`;
+
+const DEFAULT_YOUTH_TSV = `team-id	player-id	firstnames	surname	age	ageweeks	wage	rating	endurance	technique	bowling	batting	power	keeping	fielding	experience	captaincy	form	fatigue	bat-right	bowl-right	bowler-type	shirt-number	training	youth	nationality	youth-promotion-date	youth-promotion-team	talent1	talent2
+`;
+
+const DEFAULT_AFFILIATE_SENIOR_TSV = `team-id	player-id	firstnames	surname	age	ageweeks	wage	rating	endurance	technique	bowling	batting	power	keeping	fielding	experience	captaincy	form	fatigue	bat-right	bowl-right	bowler-type	shirt-number	training	youth	nationality	youth-promotion-date	youth-promotion-team	talent1	talent2
+`;
+
+const DEFAULT_AFFILIATE_YOUTH_TSV = `team-id	player-id	firstnames	surname	age	ageweeks	wage	rating	endurance	technique	bowling	batting	power	keeping	fielding	experience	captaincy	form	fatigue	bat-right	bowl-right	bowler-type	shirt-number	training	youth	nationality	youth-promotion-date	youth-promotion-team	talent1	talent2
+`;
+
+const INITIAL_VERDICTS = {
+  "Reinout Overmars": "KEEP", "Johnathon Shea": "SELL", "Dwaine Dollery": "KEEP",
+  "Wazir Ra'uf": "WATCH", "Lachlan Prior": "SELL", "Takitau Mapapalangi": "SELL",
+  "Daniel Barker": "WATCH", "Kerneels Symonds": "SELL", "Reece Raferty": "SELL",
+  "Ata Abro": "SELL", "Naji Salmeen": "SELL", "Sujeewa Dayasiri": "SELL",
+  "Duncan Mangels": "KEEP", "Sundeep Paudel": "SELL", "Jayde Seitz": "SELL",
+  "Qadir Qadir": "WATCH", "Mishra Sandhu": "SELL", "Dries Rutgers": "WATCH",
+  "Iftekhar Razzak": "KEEP", "Jaffor Dildar": "KEEP", "Shofi Khalim": "WATCH",
+  "Mehrab Ahsan": "SELL", "Nazmus Rana": "KEEP"
+};
+
+let state = {
+  season: 67, week: 0,
+  players: [],
+  sortYouth: { col: 'weeksLeft', dir: 1 },
+  sortSenior: { col: 'rating', dir: -1 },
+  trainingPlans: {}
+};
+
+// Training planner state
+let plannerYouthSchedule = {}; // { `age_wk`: trainingType }  age=16..20, wk=0..14
+let plannerSeniorSchedule = {}; // { `age_wk`: trainingType }  age=21..31
+
+// ═══════════════════════════════════════════════════════════════
+// VERDICT RECOMMENDATION
+// ═══════════════════════════════════════════════════════════════
+function recommendVerdict(p) {
+  if (INITIAL_VERDICTS[p.name]) return INITIAL_VERDICTS[p.name];
+  const talents = `${p.talent1} ${p.talent2}`.toLowerCase();
+  const hasProdigy = talents.includes("prodigy");
+  const maxPri = Math.max(p.bat, p.bowl, p.keep);
+  if (hasProdigy && (p.age <= 17 || p.end >= 6)) return "KEEP";
+  if (p.age === 16 && maxPri >= 5 && p.end >= 4) return "KEEP";
+  if (p.age >= 19 && p.end <= 3) return "SELL";
+  if (maxPri >= 7 && p.end >= 5 && p.tech >= 7) return "KEEP";
+  if (p.age <= 17 && (talents.includes("skilled") || talents.includes("gifted") || talents.includes("specialist"))) return "WATCH";
+  return "SELL";
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TSV PARSER — supports both numeric and labelled skill values
+// ═══════════════════════════════════════════════════════════════
+function parseTSVLines(tsvText, baseSeason, baseWeek, squadTag) {
+  squadTag = squadTag || 'main';
+  const lines = tsvText.trim().split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (lines.length < 2) return [];
+  const headers = lines[0].split('\t').map(h => h.trim().toLowerCase());
+  const idx = (col) => headers.indexOf(col);
+
+  const parsed = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split('\t');
+    if (cols.length < 15) continue;
+    const first = (cols[idx('firstnames')] || '').trim();
+    const last = (cols[idx('surname')] || '').trim();
+    const name = `${first} ${last}`.trim();
+    const age = parseInt(cols[idx('age')] || '0', 10);
+    const ageweeks = parseInt(cols[idx('ageweeks')] || '0', 10);
+    const isYouth = (cols[idx('youth')] || '').trim().toLowerCase() === 'true';
+
+    const weeksLeft = isYouth ? ((21 - age) * 15 - ageweeks) : 0;
+    const totalCurrentWeeks = baseSeason * 15 + baseWeek;
+    const gradTotalWeeks = totalCurrentWeeks + Math.max(0, weeksLeft - 1);
+    const gradSeason = Math.floor(gradTotalWeeks / 15);
+    const gradWeek = gradTotalWeeks % 15;
+
+    const p = {
+      id: (cols[idx('player-id')] || name).trim(),
+      name, age, ageweeks,
+      ageNum: age + ageweeks / 15,
+      wage: parseInt(cols[idx('wage')] || '0', 10),
+      rating: parseInt(cols[idx('rating')] || '0', 10),
+      end:   parseSkillVal(cols[idx('endurance')]),
+      tech:  parseSkillVal(cols[idx('technique')]),
+      bowl:  parseSkillVal(cols[idx('bowling')]),
+      bat:   parseSkillVal(cols[idx('batting')]),
+      pow:   parseSkillVal(cols[idx('power')]),
+      keep:  parseSkillVal(cols[idx('keeping')]),
+      field: parseSkillVal(cols[idx('fielding')]),
+      exp:   parseSkillVal(cols[idx('experience')]),
+      cap:   parseSkillVal(cols[idx('captaincy')]),
+      bowlerType: (cols[idx('bowler-type')] || '').trim(),
+      training: (cols[idx('training')] || '').trim(),
+      youth: isYouth,
+      nationality: (cols[idx('nationality')] || '').trim(),
+      promoDate: (cols[idx('youth-promotion-date')] || '').trim(),
+      talent1: (cols[idx('talent1')] || '').trim(),
+      talent2: (cols[idx('talent2')] || '').trim(),
+      squad: squadTag,
+      weeksLeft,
+      gradSeason: `S${gradSeason}`,
+      gradSeasonWeek: isYouth ? `S${gradSeason}, W${gradWeek}` : 'Graduated'
+    };
+    p.verdict = isYouth ? recommendVerdict(p) : 'CORE';
+    parsed.push(p);
+  }
+  return parsed;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATE MANAGEMENT
+// ═══════════════════════════════════════════════════════════════
+function loadInitialData() {
+  const saved = localStorage.getItem('ftp_analyzer_state_v3');
+  if (saved) {
+    try {
+      const obj = JSON.parse(saved);
+      if (obj && Array.isArray(obj.players) && obj.players.length > 0) {
+        state = obj;
+        document.getElementById('seasonBadge').textContent = `Baseline: Season ${state.season}, Week ${state.week}`;
+        return;
+      }
+    } catch (e) {}
+  }
+  // No saved data — show welcome screen, redirect to import tab
+  state.players = [];
+  setTimeout(() => {
+    switchTab('import', null);
+    const status = document.getElementById('importStatus');
+    if (status) {
+      status.style.color = '#fbbf24';
+      status.textContent = '👋 Welcome! Paste your squad TSV export above to get started.';
+    }
+  }, 100);
+}
+
+function saveState() {
+  localStorage.setItem('ftp_analyzer_state_v3', JSON.stringify(state));
+}
+
+function resetDefaultData() {
+  localStorage.removeItem('ftp_analyzer_state_v3');
+  state.season = 67; state.week = 0;
+  document.getElementById('seasonBadge').textContent = `Baseline: Season 67, Week 0`;
+  loadInitialData();
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SKILL DISPLAY HELPERS
+// ═══════════════════════════════════════════════════════════════
+function skillClass(val, isYouth) {
+  if (isYouth) {
+    if (val >= 7) return 'skill-hi';
+    if (val >= 4) return 'skill-mid';
+    return 'skill-lo';
+  } else {
+    if (val >= 10) return 'skill-hi';
+    if (val >= 6) return 'skill-mid';
+    return 'skill-lo';
+  }
+}
+
+function updateVerdict(id, newVal) {
+  const p = state.players.find(x => x.id === id);
+  if (p) { p.verdict = newVal; saveState(); renderStats(); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATS BAR
+// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// RECOMMENDED XI
+// ═══════════════════════════════════════════════════════════════
+function pickXI(players) {
+  // Score each player for batting and bowling strength
+  const pool = players.slice().sort((a, b) => b.rating - a.rating);
+
+  const used = new Set();
+  const xi = [];
+
+  function pick(cond, limit) {
+    let count = 0;
+    for (const p of pool) {
+      if (count >= limit) break;
+      if (used.has(p.id)) continue;
+      if (cond(p)) { xi.push(p); used.add(p.id); count++; }
+    }
+  }
+
+  // 1 keeper (best keep score)
+  const keepers = pool.slice().sort((a,b) => (b.keep + b.bat) - (a.keep + a.bat));
+  if (keepers.length) { xi.push(keepers[0]); used.add(keepers[0].id); }
+
+  // Top batters (bat ≥ bowl, bat is primary)
+  pick(p => p.bat >= p.bowl && p.bat >= 5, 4);
+
+  // Top bowlers (bowl ≥ bat, bowl is primary)
+  pick(p => p.bowl > p.bat && p.bowl >= 5, 4);
+
+  // Fill remaining with best remaining by rating
+  for (const p of pool) {
+    if (xi.length >= 11) break;
+    if (!used.has(p.id)) { xi.push(p); used.add(p.id); }
+  }
+
+  return xi.slice(0, 11);
+}
+
+function roleTag(p) {
+  if (p.keep >= 8 && (p.bat >= 7 || p.bowl >= 7)) return 'WK';
+  if (p.bat >= 9 && p.bowl >= 9) return 'AR';
+  if (p.bat >= 9) return 'BAT';
+  if (p.bowl >= 9) return 'BOWL';
+  return '';
+}
+
+function xiSkillStr(p) {
+  const parts = [];
+  if (p.bat >= 5) parts.push(`${p.bat} Bat`);
+  if (p.bowl >= 5) parts.push(`${p.bowl} Bowl`);
+  if (p.tech >= 7) parts.push(`${p.tech} Tech`);
+  if (p.keep >= 7) parts.push(`${p.keep} Keep`);
+  if (p.field >= 10) parts.push(`${p.field} Field`);
+  if (p.end >= 10) parts.push(`${p.end} End`);
+  return parts.slice(0, 3).join(' / ');
+}
+
+function renderLineupCard(title, players, extraNote) {
+  if (!players.length) return `<div class="xi-card"><h3>${title}</h3><p style="color:var(--muted);">No players in this squad.</p></div>`;
+  const xi = pickXI(players);
+  // Find captain (highest cap, then rating)
+  const captain = xi.slice().sort((a,b) => (b.cap||0) - (a.cap||0) || b.rating - a.rating)[0];
+  // Graduating soon
+  const gradSoon = players.filter(p => p.youth && p.weeksLeft <= 15).sort((a,b) => a.weeksLeft - b.weeksLeft);
+
+  let rows = xi.map((p, i) => {
+    const role = roleTag(p);
+    const roleStr = role ? ` <em style="color:var(--accent);">(${role})</em>` : '';
+    const capStr = p.id === captain.id && (p.cap || 0) >= 5 ? ` <em style="color:#fbbf24;">(C)</em>` : '';
+    const gradStr = p.youth && p.weeksLeft <= 15 ? ` <span style="color:#f87171;font-size:0.72rem;">↑ W${p.weeksLeft}</span>` : '';
+    const talents = [p.talent1, p.talent2].filter(Boolean).join(', ');
+    const talentStr = talents ? ` <span style="color:var(--muted);font-size:0.74rem;">${talents}</span>` : '';
+    return `<li><span><strong>${i+1}. ${p.name}</strong>${roleStr}${capStr}${gradStr}${talentStr}</span><span style="color:var(--muted);font-size:0.8rem;">${xiSkillStr(p)}</span></li>`;
+  }).join('');
+
+  let notes = '';
+  if (gradSoon.length) {
+    notes += `<p style="font-size:0.8rem;color:var(--muted);margin-top:12px;">
+      <strong style="color:#f87171;">↑ Graduating soon:</strong> ${gradSoon.map(p=>`${p.name} (W${p.weeksLeft})`).join(', ')}
+    </p>`;
+  }
+  if (extraNote) notes += `<p style="font-size:0.8rem;color:var(--muted);margin-top:8px;">${extraNote}</p>`;
+
+  return `<div class="xi-card">
+    <h3>${title}</h3>
+    <ul class="xi-list">${rows}</ul>
+    ${notes}
+  </div>`;
+}
+
+function renderLineups() {
+  const globalSquad = document.getElementById('globalSquadFilter') ? document.getElementById('globalSquadFilter').value : 'ALL';
+  const squadOk = p => globalSquad === 'ALL' || (p.squad || 'main') === globalSquad;
+  const s = state.season || 67;
+  const w = state.week || 0;
+  const label = `Season ${s}, Week ${w}`;
+
+  const mainSeniors   = state.players.filter(p => !p.youth && (p.squad || 'main') === 'main'      && squadOk(p));
+  const mainYouths    = state.players.filter(p =>  p.youth && (p.squad || 'main') === 'main'      && squadOk(p));
+  const affSeniors    = state.players.filter(p => !p.youth &&  p.squad === 'affiliate'             && squadOk(p));
+  const affYouths     = state.players.filter(p =>  p.youth &&  p.squad === 'affiliate'             && squadOk(p));
+
+  let html = `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;">Auto-generated from current squad data · ${label}</div><div class="xi-grid">`;
+
+  if (globalSquad === 'ALL' || globalSquad === 'main') {
+    html += renderLineupCard(`🏆 Main Senior XI`, mainSeniors, '');
+    html += renderLineupCard(`🌱 Main Youth XI`, mainYouths, '');
+  }
+  if (globalSquad === 'ALL' || globalSquad === 'affiliate') {
+    html += renderLineupCard(`🟡 Affiliate Senior XI`, affSeniors, '');
+    html += renderLineupCard(`🌱 Affiliate Youth XI`, affYouths, '');
+  }
+
+  html += '</div>';
+  document.getElementById('lineupContent').innerHTML = html;
+}
+
+function renderStats() {
+  const globalSquad = document.getElementById('globalSquadFilter') ? document.getElementById('globalSquadFilter').value : 'ALL';
+  const squadOk = p => globalSquad === 'ALL' || (p.squad || 'main') === globalSquad;
+  const squadLabel = globalSquad === 'main' ? ' — Main' : globalSquad === 'affiliate' ? ' — Affiliate' : '';
+
+  const seniors = state.players.filter(p => !p.youth && squadOk(p));
+  const youths  = state.players.filter(p =>  p.youth && squadOk(p));
+  const seniorWage = seniors.reduce((a, b) => a + b.wage, 0);
+  const youthWage  = youths.reduce((a, b) => a + b.wage, 0);
+  const keepCount  = youths.filter(p => p.verdict === 'KEEP').length;
+  const sellCount  = youths.filter(p => p.verdict === 'SELL').length;
+  const watchCount = youths.filter(p => p.verdict === 'WATCH').length;
+  const gradSoon   = youths.filter(p => p.weeksLeft <= 15).sort((a,b) => a.weeksLeft - b.weeksLeft);
+  const gradNames  = gradSoon.map(p => `${p.name} (W${p.weeksLeft})`).join(', ') || 'None';
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Senior Squad${squadLabel}</div>
+      <div class="stat-value">${seniors.length} Players</div>
+      <div class="stat-sub">Weekly Wage: $${seniorWage.toLocaleString()}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Youth Academy${squadLabel}</div>
+      <div class="stat-value">${youths.length} Players</div>
+      <div class="stat-sub">Weekly Wage: $${youthWage.toLocaleString()}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Graduating Next 15 Wks${squadLabel}</div>
+      <div class="stat-value">${gradSoon.length} Players</div>
+      <div class="stat-sub">${gradNames}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Academy Pipeline${squadLabel}</div>
+      <div class="stat-value" style="font-size:1.15rem;">
+        <span style="color:#34d399">${keepCount} Keep</span> •
+        <span style="color:#fbbf24">${watchCount} Watch</span> •
+        <span style="color:#f87171">${sellCount} Sell</span>
+      </div>
+      <div class="stat-sub">Click any verdict dropdown to adjust</div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TABLE RENDERING
+// ═══════════════════════════════════════════════════════════════
+function sortBy(group, col) {
+  const target = group === 'youth' ? state.sortYouth : state.sortSenior;
+  if (target.col === col) target.dir *= -1;
+  else { target.col = col; target.dir = (col === 'name' || col === 'weeksLeft') ? 1 : -1; }
+  renderTables();
+}
+
+function renderTables() {
+  // Global squad filter
+  const globalSquad = document.getElementById('globalSquadFilter').value;
+
+  // Youth Table
+  const ySearch = document.getElementById('youthSearch').value.toLowerCase();
+  const ySeason = document.getElementById('youthSeasonFilter').value;
+  const yVerdict = document.getElementById('youthVerdictFilter').value;
+
+  let youths = state.players.filter(p => p.youth).filter(p => {
+    const blob = `${p.name} ${p.bowlerType} ${p.talent1} ${p.talent2} ${p.nationality}`.toLowerCase();
+    if (globalSquad !== 'ALL' && (p.squad || 'main') !== globalSquad) return false;
+    if (ySearch && !blob.includes(ySearch)) return false;
+    if (ySeason !== 'ALL' && p.gradSeason !== ySeason) return false;
+    if (yVerdict !== 'ALL' && p.verdict !== yVerdict) return false;
+    return true;
+  });
+
+  youths.sort((a, b) => {
+    const c = state.sortYouth.col; const d = state.sortYouth.dir;
+    if (typeof a[c] === 'string') return a[c].localeCompare(b[c]) * d;
+    return (a[c] - b[c]) * d;
+  });
+
+  const yBody = document.querySelector('#youthTable tbody');
+  yBody.innerHTML = youths.map(p => {
+    const t1 = p.talent1 ? (p.talent1 === 'Prodigy' ? `<span class="pill pill-prodigy">Prodigy</span>` : p.talent1) : '';
+    const t2 = p.talent2 ? (p.talent2 === 'Prodigy' ? `<span class="pill pill-prodigy">Prodigy</span>` : p.talent2) : '';
+    const talents = [p.bowlerType, t1, t2].filter(Boolean).join(' • ');
+    const pillClass = p.verdict === 'KEEP' ? 'pill-keep' : (p.verdict === 'WATCH' ? 'pill-watch' : 'pill-sell');
+    return `
+      <tr>
+        <td><strong>${p.name}</strong> <span style="color:var(--muted);font-size:0.75rem;">(${p.nationality})</span>${p.squad==='affiliate'?' <span style="background:#92400e;color:#fcd34d;font-size:0.68rem;padding:1px 5px;border-radius:4px;margin-left:4px;">AFF</span>':''}</td>
+        <td>${p.age}.${p.ageweeks}</td>
+        <td>${p.weeksLeft} wks</td>
+        <td><strong>${p.gradSeasonWeek}</strong></td>
+        <td>${p.rating.toLocaleString()}</td>
+        <td>$${p.wage.toLocaleString()}</td>
+        <td class="${skillClass(p.bat, true)}">${p.bat}</td>
+        <td class="${skillClass(p.bowl, true)}">${p.bowl}</td>
+        <td class="${skillClass(p.tech, true)}">${p.tech}</td>
+        <td class="${skillClass(p.keep, true)}">${p.keep}</td>
+        <td class="${skillClass(p.field, true)}">${p.field}</td>
+        <td class="${skillClass(p.end, true)}">${p.end}</td>
+        <td class="${skillClass(p.pow, true)}">${p.pow}</td>
+        <td style="font-size:0.8rem;">${talents}</td>
+        <td>
+          <select class="verdict-select" onchange="updateVerdict('${p.id}', this.value)">
+            <option value="KEEP" ${p.verdict==='KEEP'?'selected':''}>KEEP</option>
+            <option value="WATCH" ${p.verdict==='WATCH'?'selected':''}>WATCH</option>
+            <option value="SELL" ${p.verdict==='SELL'?'selected':''}>SELL</option>
+          </select>
+        </td>
+        <td><button style="padding:3px 8px;font-size:0.74rem;" onclick="openPlannerFor('${p.id}')">📋 Plan</button></td>
+      </tr>
+    `;
+  }).join('');
+
+  // Senior Table
+  const sSearch = document.getElementById('seniorSearch').value.toLowerCase();
+  const sRole = document.getElementById('seniorRoleFilter').value;
+
+  let seniors = state.players.filter(p => !p.youth).filter(p => {
+    const blob = `${p.name} ${p.bowlerType} ${p.talent1} ${p.talent2} ${p.nationality}`.toLowerCase();
+    if (globalSquad !== 'ALL' && (p.squad || 'main') !== globalSquad) return false;
+    if (sSearch && !blob.includes(sSearch)) return false;
+    if (sRole === 'BAT' && p.bat < 9) return false;
+    if (sRole === 'BOWL' && p.bowl < 9) return false;
+    if (sRole === 'AR' && (p.bat < 9 || p.bowl < 9)) return false;
+    if (sRole === 'WK' && p.keep < 10) return false;
+    return true;
+  });
+
+  seniors.sort((a, b) => {
+    const c = state.sortSenior.col; const d = state.sortSenior.dir;
+    if (typeof a[c] === 'string') return a[c].localeCompare(b[c]) * d;
+    return (a[c] - b[c]) * d;
+  });
+
+  const sBody = document.querySelector('#seniorTable tbody');
+  sBody.innerHTML = seniors.map(p => {
+    const talents = [p.bowlerType, p.talent1, p.talent2].filter(Boolean).join(' • ');
+    return `
+      <tr>
+        <td><strong>${p.name}</strong> <span style="color:var(--muted);font-size:0.75rem;">(${p.nationality})</span>${p.squad==='affiliate'?' <span style="background:#92400e;color:#fcd34d;font-size:0.68rem;padding:1px 5px;border-radius:4px;margin-left:4px;">AFF</span>':''}</td>
+        <td>${p.age}.${p.ageweeks}</td>
+        <td>${p.rating.toLocaleString()}</td>
+        <td>$${p.wage.toLocaleString()}</td>
+        <td class="${skillClass(p.bat, false)}">${p.bat}</td>
+        <td class="${skillClass(p.bowl, false)}">${p.bowl}</td>
+        <td class="${skillClass(p.tech, false)}">${p.tech}</td>
+        <td class="${skillClass(p.keep, false)}">${p.keep}</td>
+        <td class="${skillClass(p.field, false)}">${p.field}</td>
+        <td class="${skillClass(p.end, false)}">${p.end}</td>
+        <td class="${skillClass(p.pow, false)}">${p.pow}</td>
+        <td>${p.exp}</td>
+        <td>${p.cap}</td>
+        <td style="font-size:0.8rem;">${talents}</td>
+        <td><span class="pill pill-core">SENIOR</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TRAINING PLANNER
+// ═══════════════════════════════════════════════════════════════
+const TRAINING_OPTIONS = ['Batting','Batting-Tech','Bowling','Bowling-Tech','All-Rounder','Keeping','Keeper-Batsman','Fielding','Fitness','Strength','Rest'];
+const ABBREV = { 'Batting':'Bt','Batting-Tech':'BtT','Bowling':'Bw','Bowling-Tech':'BwT','All-Rounder':'AR','Keeping':'K','Keeper-Batsman':'KB','Fielding':'Fd','Fitness':'Ft','Strength':'S','Rest':'R' };
+
+function trainingSelect(id, val) {
+  return `<select class="verdict-select" style="width:100%;font-size:0.74rem;" id="${id}" onchange="onScheduleChange()">
+    ${TRAINING_OPTIONS.map(t=>`<option value="${t}" ${val===t?'selected':''}>${ABBREV[t]||t}</option>`).join('')}
+  </select>`;
+}
+
+function buildYouthGrid() {
+  const age = parseInt(document.getElementById('pAge').value) || 17;
+  const ageWeeks = parseInt(document.getElementById('pAgeWeeks').value) || 0;
+  const isYouth = document.getElementById('pIsYouth').value === '1';
+  if (!isYouth) {
+    document.getElementById('youthScheduleCard').style.display = 'none';
+    return;
+  }
+  document.getElementById('youthScheduleCard').style.display = '';
+
+  // Determine which ages remain in youth (up to 20)
+  let startAge = Math.max(16, Math.min(20, age));
+  let startWeek = ageWeeks;
+
+  const ages = [];
+  for (let a = startAge; a <= 20; a++) ages.push(a);
+
+  if (ages.length === 0) {
+    document.getElementById('youthScheduleGrid').innerHTML = '<p style="color:var(--muted);font-size:0.84rem;">Player is already 21+ — no youth schedule needed.</p>';
+    return;
+  }
+
+  const defaultAcadMain = document.getElementById('pAcademyMain').value;
+
+  // Age header
+  let html = `<div class="age-header"><div class="age-header-row">
+    <div class="age-header-spacer"></div>
+    ${ages.map(a=>`<div class="age-header-cell">Age ${a}</div>`).join('')}
+  </div></div>`;
+
+  // Academy row
+  html += `<div class="week-grid">`;
+  html += `<div class="week-row"><span class="week-label" style="font-size:0.68rem;color:#34d399;">Academy</span>`;
+  for (const a of ages) {
+    const saved = plannerYouthSchedule[`acad_${a}`] || defaultAcadMain;
+    html += `<div class="week-cell-acad">${academySelect(`ya_${a}`, saved)}</div>`;
+  }
+  html += `</div>`;
+
+  for (let wk = 0; wk <= 14; wk++) {
+    html += `<div class="week-row"><span class="week-label">Wk ${wk}</span>`;
+    for (const a of ages) {
+      if (a === startAge && wk < startWeek) {
+        html += `<div class="week-cell" style="text-align:center;color:var(--border);font-size:0.72rem;">—</div>`;
+      } else {
+        const key = `y_${a}_${wk}`;
+        const saved = plannerYouthSchedule[key] || 'Batting';
+        html += `<div class="week-cell">${trainingSelect(key, saved)}</div>`;
+      }
+    }
+    html += `</div>`;
+  }
+  html += `</div>`; // close week-grid
+  document.getElementById('youthScheduleGrid').innerHTML = html;
+}
+
+function buildSeniorGrid() {
+  const isYouth = document.getElementById('pIsYouth').value === '1';
+  const age = parseInt(document.getElementById('pAge').value) || 21;
+  const seasons = Math.min(11, Math.max(1, parseInt(document.getElementById('seniorSeasons').value) || 4));
+
+  let startAge = isYouth ? 21 : Math.max(21, age);
+  const ages = [];
+  for (let a = startAge; a < startAge + seasons; a++) ages.push(a);
+
+  let html = `<div class="age-header"><div class="age-header-row">
+    <div class="age-header-spacer"></div>
+    ${ages.map(a=>`<div class="age-header-cell">Age ${a}</div>`).join('')}
+  </div></div><div class="week-grid">`;
+
+  // Squad row (Main / Affiliate per age)
+  html += `<div class="week-row"><span class="week-label" style="font-size:0.7rem;color:var(--accent);">Squad</span>`;
+  for (const a of ages) {
+    const squadKey = `sq_${a}`;
+    const savedSquad = plannerSeniorSchedule[squadKey] || 'main';
+    html += `<div class="senior-cell"><select id="${squadKey}" onchange="onScheduleChange()" style="width:100%;padding:4px 4px;font-size:0.74rem;background:#1e3a5f;border-color:#3b82f6;">
+      <option value="main"${savedSquad==='main'?' selected':''}>Main</option>
+      <option value="affiliate"${savedSquad==='affiliate'?' selected':''}>Affiliate</option>
+    </select></div>`;
+  }
+  html += `</div>`;
+
+  // Academy row — per-age academy level, defaults based on squad assignment
+  const defaultAcadMain2 = document.getElementById('pAcademyMain').value;
+  const defaultAcadAff2 = document.getElementById('pAcademyAffiliate').value;
+  html += `<div class="week-row"><span class="week-label" style="font-size:0.68rem;color:#34d399;">Academy</span>`;
+  for (const a of ages) {
+    const squadKey = `sq_${a}`;
+    const squadForDefault = (plannerSeniorSchedule[squadKey] || 'main');
+    const defaultAcad = squadForDefault === 'affiliate' ? defaultAcadAff2 : defaultAcadMain2;
+    const savedAcad = plannerSeniorSchedule[`acad_${a}`] || defaultAcad;
+    html += `<div class="senior-cell">${academySelect(`sa_${a}`, savedAcad)}</div>`;
+  }
+  html += `</div>`;
+
+  for (let wk = 0; wk <= 14; wk++) {
+    html += `<div class="week-row"><span class="week-label">Wk ${wk}</span>`;
+    for (const a of ages) {
+      const key = `s_${a}_${wk}`;
+      const saved = plannerSeniorSchedule[key] || 'Bowling';
+      html += `<div class="senior-cell">${trainingSelect(key, saved)}</div>`;
+    }
+    html += `</div>`;
+  }
+  html += `</div>`; // close week-grid
+  document.getElementById('seniorScheduleGrid').innerHTML = `<div class="senior-scroll-wrap"><div class="senior-scroll-inner">${html}</div></div>`;
+}
+
+// Academy select helper — compact dropdown for per-age academy level
+function academySelect(id, val) {
+  const opts = ACADEMY_NAMES.map((n, i) =>
+    `<option value="${n}"${val === n ? ' selected' : ''}>${n.charAt(0).toUpperCase() + n.slice(1)}</option>`
+  ).join('');
+  return `<select id="${id}" onchange="onScheduleChange()" style="width:100%;font-size:0.68rem;padding:2px 3px;background:#1a2e1a;border-color:#34d399;color:#34d399;">${opts}</select>`;
+}
+
+function onScheduleChange() {
+  // Collect all current dropdown values back into schedule objects
+  const isYouth = document.getElementById('pIsYouth').value === '1';
+  const age = parseInt(document.getElementById('pAge').value) || 17;
+  const ageWeeks = parseInt(document.getElementById('pAgeWeeks').value) || 0;
+
+  if (isYouth) {
+    for (let a = Math.max(16, age); a <= 20; a++) {
+      // Save per-age academy
+      const acadEl = document.getElementById(`ya_${a}`);
+      if (acadEl) plannerYouthSchedule[`acad_${a}`] = acadEl.value;
+      for (let wk = 0; wk <= 14; wk++) {
+        if (a === age && wk < ageWeeks) continue;
+        const el = document.getElementById(`y_${a}_${wk}`);
+        if (el) plannerYouthSchedule[`y_${a}_${wk}`] = el.value;
+      }
+    }
+  }
+  const startAge = isYouth ? 21 : Math.max(21, age);
+  const seasons = Math.min(11, Math.max(1, parseInt(document.getElementById('seniorSeasons').value) || 4));
+  for (let a = startAge; a < startAge + seasons; a++) {
+    // Save squad and per-age academy
+    const sqEl = document.getElementById(`sq_${a}`);
+    if (sqEl) plannerSeniorSchedule[`sq_${a}`] = sqEl.value;
+    const acadEl = document.getElementById(`sa_${a}`);
+    if (acadEl) plannerSeniorSchedule[`acad_${a}`] = acadEl.value;
+    for (let wk = 0; wk <= 14; wk++) {
+      const el = document.getElementById(`s_${a}_${wk}`);
+      if (el) plannerSeniorSchedule[`s_${a}_${wk}`] = el.value;
+    }
+  }
+}
+
+function buildPlannerGrids() {
+  buildYouthGrid();
+  buildSeniorGrid();
+}
+
+// ── Bulk-fill helpers ──
+function fillAllYouth() {
+  const type = document.getElementById('youthFillType').value;
+  const age = parseInt(document.getElementById('pAge').value) || 16;
+  const ageWeeks = parseInt(document.getElementById('pAgeWeeks').value) || 0;
+  for (let a = Math.max(16, age); a <= 20; a++) {
+    for (let wk = 0; wk <= 14; wk++) {
+      if (a === age && wk < ageWeeks) continue;
+      const el = document.getElementById(`y_${a}_${wk}`);
+      if (el) { el.value = type; plannerYouthSchedule[`y_${a}_${wk}`] = type; }
+    }
+  }
+}
+
+function fillYouthAge() {
+  const type = document.getElementById('youthFillType').value;
+  const targetAge = document.getElementById('youthFillAge').value;
+  const startAge = parseInt(document.getElementById('pAge').value) || 16;
+  const startWeeks = parseInt(document.getElementById('pAgeWeeks').value) || 0;
+  const ages = targetAge === 'all' ? [16,17,18,19,20] : [parseInt(targetAge)];
+  for (const a of ages) {
+    for (let wk = 0; wk <= 14; wk++) {
+      if (a === startAge && wk < startWeeks) continue;
+      const el = document.getElementById(`y_${a}_${wk}`);
+      if (el) { el.value = type; plannerYouthSchedule[`y_${a}_${wk}`] = type; }
+    }
+  }
+}
+
+function fillAllSenior() {
+  const type = document.getElementById('seniorFillType').value;
+  const isYouth = document.getElementById('pIsYouth').value === '1';
+  const age = parseInt(document.getElementById('pAge').value) || 21;
+  const seasons = Math.min(11, Math.max(1, parseInt(document.getElementById('seniorSeasons').value) || 4));
+  const startAge = isYouth ? 21 : Math.max(21, age);
+  for (let a = startAge; a < startAge + seasons; a++) {
+    for (let wk = 0; wk <= 14; wk++) {
+      const el = document.getElementById(`s_${a}_${wk}`);
+      if (el) { el.value = type; plannerSeniorSchedule[`s_${a}_${wk}`] = type; }
+    }
+  }
+}
+
+function fillSeniorAge() {
+  const type = document.getElementById('seniorFillType').value;
+  const targetAge = document.getElementById('seniorFillAge').value;
+  const isYouth = document.getElementById('pIsYouth').value === '1';
+  const age = parseInt(document.getElementById('pAge').value) || 21;
+  const seasons = Math.min(11, Math.max(1, parseInt(document.getElementById('seniorSeasons').value) || 4));
+  const startAge = isYouth ? 21 : Math.max(21, age);
+  const ages = targetAge === 'all'
+    ? Array.from({length: seasons}, (_, i) => startAge + i)
+    : [parseInt(targetAge)];
+  for (const a of ages) {
+    for (let wk = 0; wk <= 14; wk++) {
+      const el = document.getElementById(`s_${a}_${wk}`);
+      if (el) { el.value = type; plannerSeniorSchedule[`s_${a}_${wk}`] = type; }
+    }
+  }
+}
+
+function loadPlayerIntoPlanner() {
+  const sel = document.getElementById('plannerPlayerSelect').value;
+  if (!sel) return;
+  const p = state.players.find(x => x.id === sel);
+  if (!p) return;
+
+  document.getElementById('pAge').value = p.age;
+  document.getElementById('pAgeWeeks').value = p.ageweeks;
+  document.getElementById('pIsYouth').value = p.youth ? '1' : '0';
+  document.getElementById('sk_bat').value = p.bat;
+  document.getElementById('sk_bowl').value = p.bowl;
+  document.getElementById('sk_tech').value = p.tech;
+  document.getElementById('sk_keep').value = p.keep;
+  document.getElementById('sk_field').value = p.field;
+  document.getElementById('sk_end').value = p.end;
+  document.getElementById('sk_pow').value = p.pow;
+
+  // Try to detect talent
+  const talents = [p.talent1, p.talent2];
+  const trainingTalents = ['Prodigy','Gifted (Batting)','Gifted (Bowling)','Gifted (Technique)','Gifted (Keeping)','Gifted (Fielding)','Gifted (Endurance)','Gifted (Power)'];
+  const foundTalent = talents.find(t => trainingTalents.includes(t)) || 'None';
+  document.getElementById('pTalent').value = foundTalent;
+
+  // Load saved plan if exists
+  if (state.trainingPlans && state.trainingPlans[p.id]) {
+    const saved = state.trainingPlans[p.id];
+    plannerYouthSchedule = saved.youth || {};
+    plannerSeniorSchedule = saved.senior || {};
+  } else {
+    // Default to player's current training preference, squad assignment from their current squad
+    const def = p.training || 'Batting';
+    const defaultSquad = p.squad || 'main';
+    plannerYouthSchedule = {}; plannerSeniorSchedule = {};
+    for (let a = 16; a <= 20; a++) for (let wk = 0; wk <= 14; wk++) plannerYouthSchedule[`y_${a}_${wk}`] = def;
+    for (let a = 21; a <= 35; a++) {
+      plannerSeniorSchedule[`sq_${a}`] = defaultSquad;
+      for (let wk = 0; wk <= 14; wk++) plannerSeniorSchedule[`s_${a}_${wk}`] = def;
+    }
+  }
+
+  // Clear any previously imported training log data for the new player
+  plannerSubLevelOffsets = {};
+  document.getElementById('trainingLogInput').value = '';
+  document.getElementById('trainingLogStatus').textContent = '';
+
+  document.getElementById('projCard').style.display = 'none';
+  buildPlannerGrids();
+}
+
+function openPlannerFor(playerId) {
+  switchTab('training', document.querySelector('.tab:nth-child(4)'));
+  document.getElementById('plannerPlayerSelect').value = playerId;
+  loadPlayerIntoPlanner();
+}
+
+// ── Training Log Parser ──────────────────────────────────────────────────────
+// Stores per-skill sublevel offsets parsed from the game's training log.
+// These are used by runProjection() instead of the midpoint default.
+let plannerSubLevelOffsets = {}; // { bat: 6200, bowl: null, ... } null = use midpoint
+
+const LOG_SKILL_MAP = {
+  'batting':   'bat',
+  'bowling':   'bowl',
+  'technique': 'tech',
+  'keeping':   'keep',
+  'fielding':  'field',
+  'endurance': 'end',
+  'power':     'pow',
+  'experience':'exp',
+  'captaincy': 'cap',
+};
+
+function parseTrainingLog() {
+  const raw = document.getElementById('trainingLogInput').value.trim();
+  const statusEl = document.getElementById('trainingLogStatus');
+  if (!raw) { statusEl.textContent = 'Paste log lines first.'; return; }
+
+  // Parse lines: "26 Oct 26 04:57\tKeeping increased from reasonable to capable during training"
+  // Date format: DD Mon YY HH:MM
+  const MONTHS = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+
+  function parseLogDate(dateStr) {
+    // "26 Oct 26 04:57"
+    const m = dateStr.trim().match(/^(\d+)\s+([A-Za-z]+)\s+(\d+)\s+(\d+):(\d+)/);
+    if (!m) return null;
+    const day = parseInt(m[1]);
+    const mon = MONTHS[m[2].toLowerCase()];
+    const yr = 2000 + parseInt(m[3]);
+    const hr = parseInt(m[4]);
+    const min = parseInt(m[5]);
+    if (mon === undefined) return null;
+    return new Date(yr, mon, day, hr, min);
+  }
+
+  // "increased from X to Y" — we want Y (the new level)
+  const lines = raw.split('\n').filter(l => l.includes('increased from') && l.includes('during training'));
+
+  if (!lines.length) {
+    statusEl.textContent = '⚠️ No level-up lines found. Expected format: "26 Oct 26 04:57  Keeping increased from..."';
+    return;
+  }
+
+  // For each skill, find the MOST RECENT level-up
+  const latest = {}; // skillKey → { date, newLevel }
+
+  for (const line of lines) {
+    const parts = line.split('\t');
+    let dateStr, text;
+    if (parts.length >= 2) {
+      dateStr = parts[0]; text = parts[1];
+    } else {
+      // Try splitting on first occurrence of a capital letter after the date
+      const spaceIdx = line.indexOf('  ');
+      if (spaceIdx === -1) continue;
+      dateStr = line.substring(0, spaceIdx);
+      text = line.substring(spaceIdx).trim();
+    }
+
+    const date = parseLogDate(dateStr);
+    if (!date) continue;
+
+    // "Keeping increased from reasonable to capable during training"
+    const inc = text.match(/^(\w+)\s+increased from\s+(.+?)\s+to\s+(.+?)\s+during training/i);
+    if (!inc) continue;
+
+    const skillName = inc[1].toLowerCase();
+    const newLevelName = inc[3].toLowerCase().trim();
+    const skillKey = LOG_SKILL_MAP[skillName];
+    if (!skillKey) continue;
+
+    const newLevel = SKILL_LABEL_MAP[newLevelName];
+    if (newLevel === undefined) continue;
+
+    if (!latest[skillKey] || date > latest[skillKey].date) {
+      latest[skillKey] = { date, newLevel };
+    }
+  }
+
+  if (!Object.keys(latest).length) {
+    statusEl.textContent = '⚠️ Could not parse any level-up entries.';
+    return;
+  }
+
+  // Now compute sublevels for each skill:
+  // At the moment of level-up, sublevel = SUBLEVELS_AT[newLevel] (bottom of range).
+  // Weeks since level-up = Math.floor((now - date) / (7 days))
+  // We store: baseSubLevel = SUBLEVELS_AT[newLevel] + weeksOfProgress
+  // We don't know what training they did, so we just store the floor. That's already
+  // much better than the midpoint for skills that levelled up recently.
+  // For skills that levelled up a long time ago, the user's current skill integer
+  // is the best we can do (midpoint).
+
+  const now = new Date();
+  const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+  const updated = [];
+  plannerSubLevelOffsets = {};
+
+  for (const [sk, info] of Object.entries(latest)) {
+    const floor = SUBLEVELS_AT[info.newLevel];
+    const ceiling = info.newLevel < 15 ? SUBLEVELS_AT[info.newLevel + 1] - 1 : 17499;
+    const weeksAgo = Math.max(0, Math.floor((now - info.date) / MS_PER_WEEK));
+    // Store floor + small progress estimate. We don't know exact training, so
+    // add weeksAgo * 50 as a rough average gain across all training types
+    // but cap at ceiling - 1 (so we don't falsely push into next level)
+    const estimated = Math.min(ceiling - 1, floor + weeksAgo * 50);
+    plannerSubLevelOffsets[sk] = estimated;
+
+    // Also update the integer skill input to match the new level (may differ if log has
+    // more recent data than what was imported via TSV)
+    const currentInput = document.getElementById(`sk_${sk}`);
+    if (currentInput) {
+      const currentSkillInt = parseInt(currentInput.value) || 0;
+      // Only update if log says higher level
+      if (info.newLevel > currentSkillInt) {
+        currentInput.value = info.newLevel;
+      }
+    }
+
+    const skName = Object.keys(LOG_SKILL_MAP).find(k => LOG_SKILL_MAP[k] === sk) || sk;
+    updated.push(`${skName}: ~${estimated.toLocaleString()} sublevels (${weeksAgo}w ago)`);
+  }
+
+  statusEl.innerHTML = `✅ Set sublevels from log — ${updated.join(' · ')}`;
+}
+
+function clearTrainingLog() {
+  plannerSubLevelOffsets = {};
+  document.getElementById('trainingLogInput').value = '';
+  document.getElementById('trainingLogStatus').textContent = '';
+}
+
+function savePlannerState() {
+  const sel = document.getElementById('plannerPlayerSelect').value;
+  onScheduleChange();
+  if (sel) {
+    if (!state.trainingPlans) state.trainingPlans = {};
+    state.trainingPlans[sel] = { youth: {...plannerYouthSchedule}, senior: {...plannerSeniorSchedule} };
+    saveState();
+    // Flash feedback
+    const btn = event.target;
+    const orig = btn.textContent; btn.textContent = '✅ Saved!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  }
+}
+
+function calcProjection() {
+  onScheduleChange();
+
+  const academyMain = document.getElementById('pAcademyMain').value;
+  const academyAffiliate = document.getElementById('pAcademyAffiliate').value;
+  const talent = document.getElementById('pTalent').value;
+  function academyForAge(a) {
+    const squad = plannerSeniorSchedule[`sq_${a}`] || 'main';
+    return squad === 'affiliate' ? academyAffiliate : academyMain;
+  }
+  const startAge = parseInt(document.getElementById('pAge').value) || 17;
+  const startAgeWeeks = parseInt(document.getElementById('pAgeWeeks').value) || 0;
+  const isYouth = document.getElementById('pIsYouth').value === '1';
+
+  // Current sub-levels (convert integer skill to midpoint of that level's sublevel range)
+  const startSkills = {
+    bat:   parseInt(document.getElementById('sk_bat').value) || 0,
+    bowl:  parseInt(document.getElementById('sk_bowl').value) || 0,
+    tech:  parseInt(document.getElementById('sk_tech').value) || 0,
+    keep:  parseInt(document.getElementById('sk_keep').value) || 0,
+    field: parseInt(document.getElementById('sk_field').value) || 0,
+    end:   parseInt(document.getElementById('sk_end').value) || 0,
+    pow:   parseInt(document.getElementById('sk_pow').value) || 0,
+  };
+  // Work in sub-levels for precision
+  // Use plannerSubLevelOffsets (from training log) when available, otherwise midpoint
+  const sub = {};
+  for (const [k, v] of Object.entries(startSkills)) {
+    if (plannerSubLevelOffsets[k] !== undefined) {
+      // Validate: offset must be within the range of the stated skill level
+      const lo = SUBLEVELS_AT[Math.min(15, Math.max(0, v))];
+      const hi = v < 15 ? SUBLEVELS_AT[v + 1] - 1 : 17499;
+      sub[k] = Math.min(hi, Math.max(lo, plannerSubLevelOffsets[k]));
+    } else {
+      sub[k] = skillToSublevels(v);
+    }
+  }
+
+  const snapshots = []; // { label, skills }
+  const levelUps = [];  // { age, wk, sk, fromLevel, toLevel, label }
+
+  const addSnapshot = (label, subLevels) => {
+    const snap = { label, skills: {} };
+    for (const [k, v] of Object.entries(subLevels)) snap.skills[k] = sublevelsToSkill(v);
+    snapshots.push(snap);
+  };
+
+  // Track level-ups after applying gains to sub
+  const prevLevels = {};
+  for (const [k, v] of Object.entries(sub)) prevLevels[k] = sublevelsToSkill(v);
+
+  function applyAndTrack(gains, age, wk) {
+    for (const [sk, gain] of Object.entries(gains)) {
+      if (sub[sk] === undefined) continue;
+      const before = sublevelsToSkill(sub[sk]);
+      sub[sk] += gain;
+      const after = sublevelsToSkill(sub[sk]);
+      if (after > before) {
+        levelUps.push({ age, wk, sk, fromLevel: before, toLevel: after });
+      }
+    }
+  }
+
+  function applyDecayAndTrack(gains, age, wk, decayFactor) {
+    for (const sk of Object.keys(sub)) {
+      const before = sublevelsToSkill(sub[sk]);
+      const trainGain = gains[sk] || 0;
+      const decay = (sk === 'end') ? 15 * decayFactor * 2 : 15 * decayFactor;
+      sub[sk] = Math.max(0, sub[sk] + trainGain - decay);
+      const after = sublevelsToSkill(sub[sk]);
+      if (after !== before) {
+        levelUps.push({ age, wk, sk, fromLevel: before, toLevel: after });
+      }
+    }
+  }
+
+  addSnapshot('Start', sub);
+
+  // ── Youth phase ──
+  if (isYouth) {
+    for (let a = startAge; a <= 20; a++) {
+      const acadThisAge = plannerYouthSchedule[`acad_${a}`] || academyMain;
+      const wkStart = (a === startAge) ? startAgeWeeks : 0;
+      for (let wk = wkStart; wk <= 14; wk++) {
+        const key = `y_${a}_${wk}`;
+        const training = plannerYouthSchedule[key] || 'Batting';
+        const gains = weekGain(training, acadThisAge, talent, a);
+        applyAndTrack(gains, a, wk);
+      }
+      addSnapshot(`Age ${a} end`, sub);
+    }
+  }
+
+  // ── Senior phase ──
+  const seniorStart = isYouth ? 21 : Math.max(21, startAge);
+  const seasons = Math.min(11, Math.max(1, parseInt(document.getElementById('seniorSeasons').value) || 4));
+  for (let a = seniorStart; a < seniorStart + seasons; a++) {
+    const acadThisAge = plannerSeniorSchedule[`acad_${a}`] || academyForAge(a);
+    const acad = acadThisAge;
+    const wkStart = (!isYouth && a === startAge) ? startAgeWeeks : 0;
+    for (let wk = wkStart; wk <= 14; wk++) {
+      const key = `s_${a}_${wk}`;
+      const training = plannerSeniorSchedule[key] || 'Bowling';
+      const gains = weekGain(training, acad, talent, a);
+      if (a >= 30) {
+        const decayFactor = a >= 31 ? 2 : 1;
+        applyDecayAndTrack(gains, a, wk, decayFactor);
+      } else {
+        applyAndTrack(gains, a, wk);
+      }
+    }
+    const squadLabel = (plannerSeniorSchedule[`sq_${a}`] || 'main') === 'affiliate' ? ' Aff' : '';
+    const acadLabel = acad !== academyForAge(a) ? ` [${acad}]` : '';
+    addSnapshot(`Age ${a}${squadLabel}${acadLabel}`, sub);
+  }
+
+  window._lastSnapshots = snapshots;
+  // Find the index of the last youth snapshot so the summary shows youth-end stats
+  const youthEndIdx = isYouth
+    ? snapshots.reduce((best, s, i) => s.label.includes('end') ? i : best, -1)
+    : -1;
+  renderProjection(snapshots, startSkills, levelUps, youthEndIdx);
+}
+
+function renderProjection(snapshots, startSkills, levelUps, youthEndIdx) {
+  if (snapshots.length < 2) return;
+  levelUps = levelUps || [];
+  document.getElementById('projCard').style.display = '';
+
+  const skills = ['bat','bowl','tech','keep','field','end','pow'];
+  const skillNames = { bat:'Batting', bowl:'Bowling', tech:'Technique', keep:'Keeping', field:'Fielding', end:'Endurance', pow:'Power' };
+  const skillColors = { bat:'#3b82f6', bowl:'#10b981', tech:'#a855f7', keep:'#f59e0b', field:'#06b6d4', end:'#f87171', pow:'#fb923c' };
+
+  const startSnap = snapshots[0];
+  const endSnap = snapshots[snapshots.length - 1];
+  // For youth players, summary shows stats at graduation (end of age 20), not end of senior career
+  const summarySnap = (youthEndIdx !== undefined && youthEndIdx >= 0) ? snapshots[youthEndIdx] : endSnap;
+  const summaryLabel = (youthEndIdx !== undefined && youthEndIdx >= 0) ? `at ${summarySnap.label}` : '';
+
+  // Summary cards
+  let summaryHtml = `<div style="font-size:0.76rem;color:var(--muted);margin-bottom:8px;">
+    📊 Summary ${summaryLabel ? `<strong style="color:var(--accent);">${summaryLabel}</strong>` : '(end of projection)'}
+    ${youthEndIdx >= 0 ? `<span style="color:var(--border);margin-left:8px;">• Full career in table below</span>` : ''}
+  </div><div class="proj-summary">`;
+  for (const sk of skills) {
+    const start = startSnap.skills[sk];
+    const end = summarySnap.skills[sk];
+    const delta = end - start;
+    const deltaClass = delta > 0 ? 'delta-pos' : delta < 0 ? 'delta-neg' : 'delta-zero';
+    const pct = Math.round((end / 15) * 100);
+    summaryHtml += `
+      <div class="proj-mini">
+        <div class="label">${skillNames[sk]}</div>
+        <div class="val">${end} <span class="${deltaClass}" style="font-size:0.85rem;">${delta >= 0 ? '+' : ''}${delta}</span></div>
+        <div class="sub">${skillLabel(end)} (was ${skillLabel(start)})</div>
+        <div class="skill-bar" style="margin-top:6px;"><div class="skill-bar-fill" style="width:${pct}%;background:${skillColors[sk]};"></div></div>
+      </div>`;
+  }
+  summaryHtml += '</div>';
+
+  // ── Full career skill table ──────────────────────────────────
+  const SKILL_LABEL_SHORT = ['atr','dre','por','ord','avg','rea','cap','rel','acc','exp','out','spc','exc','wcl','eli','leg'];
+  function cellBg(v) {
+    if (v >= 13) return '#3b0764';
+    if (v >= 11) return '#1e3a5f';
+    if (v >= 9)  return '#064e3b';
+    if (v >= 7)  return '#1c3024';
+    if (v >= 5)  return '#1e293b';
+    return '#0f172a';
+  }
+  function cellFg(v) {
+    if (v >= 13) return '#e879f9';
+    if (v >= 11) return '#60a5fa';
+    if (v >= 9)  return '#34d399';
+    if (v >= 7)  return '#86efac';
+    if (v >= 5)  return '#94a3b8';
+    return '#475569';
+  }
+
+  let tableHtml = `
+  <div style="margin-top:20px;">
+    <h4 style="margin:0 0 10px;font-size:0.9rem;color:var(--accent);">📋 Full Career Skill Progression</h4>
+    <div style="overflow-x:auto;">
+    <table style="border-collapse:collapse;font-size:0.76rem;width:100%;min-width:600px;">
+      <thead>
+        <tr style="background:#0f172a;">
+          <th style="padding:7px 10px;text-align:left;white-space:nowrap;position:sticky;left:0;background:#0f172a;z-index:1;">Age</th>
+          ${skills.map(s=>`<th style="padding:7px 8px;text-align:center;color:${skillColors[s]};">${skillNames[s]}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>`;
+
+  for (let i = 0; i < snapshots.length; i++) {
+    const snap = snapshots[i];
+    const prev = snapshots[i - 1] || snap;
+    const isYouthGrad = (youthEndIdx !== undefined && i === youthEndIdx);
+    const isStart = i === 0;
+    const borderTop = isYouthGrad ? 'border-top:2px solid #34d399;' : isStart ? '' : 'border-top:1px solid #1e293b;';
+    const rowBg = isYouthGrad ? 'background:rgba(52,211,153,0.07);' : '';
+    const gradBadge = isYouthGrad ? '<br><span style="font-size:0.65rem;color:#34d399;font-weight:600;">🎓 Grad</span>' : '';
+
+    tableHtml += `<tr style="${borderTop}${rowBg}">
+      <td style="padding:6px 10px;white-space:nowrap;position:sticky;left:0;background:${isYouthGrad?'#0a2318':'#0f172a'};font-weight:600;color:var(--muted);">
+        ${snap.label}${gradBadge}
+      </td>`;
+
+    for (const sk of skills) {
+      const val = snap.skills[sk];
+      const prevVal = prev.skills[sk];
+      const delta = val - prevVal;
+      const bg = cellBg(val);
+      const fg = cellFg(val);
+      const label = SKILL_LABEL_SHORT[val] || val;
+      const pct = Math.round((val / 15) * 100);
+      const deltaStr = (!isStart && delta !== 0)
+        ? `<div style="font-size:0.65rem;color:${delta>0?'#34d399':'#f87171'};margin-top:1px;">${delta>0?'+':''}${delta}</div>`
+        : '';
+      tableHtml += `<td style="padding:4px 5px;text-align:center;background:${bg};">
+        <div style="color:${fg};font-weight:700;line-height:1.2;">${val}</div>
+        <div style="font-size:0.65rem;color:${fg}80;">${label}</div>
+        <div style="height:3px;background:#1e293b;border-radius:2px;margin-top:3px;overflow:hidden;">
+          <div style="height:3px;width:${pct}%;background:${fg};border-radius:2px;"></div>
+        </div>
+        ${deltaStr}
+      </td>`;
+    }
+    tableHtml += '</tr>';
+  }
+  tableHtml += `</tbody></table></div></div>`;
+
+  // Level-up schedule
+  const skillNames3 = { bat:'Batting', bowl:'Bowling', tech:'Technique', keep:'Keeping', field:'Fielding', end:'Endurance', pow:'Power' };
+  const skillColors2 = { bat:'#3b82f6', bowl:'#10b981', tech:'#a855f7', keep:'#f59e0b', field:'#06b6d4', end:'#f87171', pow:'#fb923c' };
+  let levelUpHtml = '';
+  if (levelUps.length > 0) {
+    levelUpHtml = `<div style="margin-top:20px;">
+      <h4 style="margin:0 0 10px;font-size:0.9rem;color:var(--accent);">📈 Level-Up Schedule</h4>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
+    for (const lu of levelUps) {
+      const color = skillColors2[lu.sk] || '#aaa';
+      const skLabel = skillNames3[lu.sk] || lu.sk;
+      const fromName = SKILL_LABEL_MAP ? Object.keys(SKILL_LABEL_MAP).find(k => SKILL_LABEL_MAP[k] === lu.fromLevel) || lu.fromLevel : lu.fromLevel;
+      const toName   = SKILL_LABEL_MAP ? Object.keys(SKILL_LABEL_MAP).find(k => SKILL_LABEL_MAP[k] === lu.toLevel)   || lu.toLevel   : lu.toLevel;
+      const dir = lu.toLevel > lu.fromLevel ? '↑' : '↓';
+      const dirColor = lu.toLevel > lu.fromLevel ? '#34d399' : '#f87171';
+      levelUpHtml += `<div style="background:var(--surface);border:1px solid ${color}40;border-left:3px solid ${color};border-radius:6px;padding:5px 10px;font-size:0.76rem;min-width:160px;">
+        <div style="color:${color};font-weight:600;">${skLabel}</div>
+        <div style="color:var(--fg);margin:2px 0;">Age ${lu.age} · Wk ${lu.wk}</div>
+        <div style="color:var(--muted);font-size:0.7rem;">${fromName} <span style="color:${dirColor};font-weight:700;">${dir}</span> <span style="color:var(--fg);">${toName}</span></div>
+      </div>`;
+    }
+    levelUpHtml += `</div></div>`;
+  } else {
+    levelUpHtml = `<div style="margin-top:16px;color:var(--muted);font-size:0.78rem;">No level-ups projected in this period.</div>`;
+  }
+
+  // Show sublevel info if training log was used
+  let subLevelNote = '';
+  const loggedSkills = Object.keys(plannerSubLevelOffsets);
+  if (loggedSkills.length > 0) {
+    const skillNames2 = { bat:'Bat', bowl:'Bowl', tech:'Tech', keep:'Keep', field:'Field', end:'End', pow:'Pow' };
+    const parts = loggedSkills.map(sk => {
+      const sl = plannerSubLevelOffsets[sk];
+      const intLevel = parseInt(document.getElementById(`sk_${sk}`)?.value) || 0;
+      const lo = SUBLEVELS_AT[Math.min(15, intLevel)];
+      const hi = intLevel < 15 ? SUBLEVELS_AT[intLevel + 1] - 1 : 17499;
+      const pct = Math.round(((sl - lo) / (hi - lo)) * 100);
+      return `${skillNames2[sk] || sk}: ${sl.toLocaleString()} (${pct}% through level)`;
+    });
+    subLevelNote = `<div style="font-size:0.72rem;color:var(--accent);background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:6px;padding:8px 12px;margin-bottom:12px;">
+      📋 <strong>Training log applied.</strong> Starting sublevels: ${parts.join(' · ')}
+    </div>`;
+  }
+
+  document.getElementById('projOutput').innerHTML = subLevelNote + summaryHtml + tableHtml + levelUpHtml;
+}
+
+function populatePlannerSelect() {
+  const sel = document.getElementById('plannerPlayerSelect');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— Select a player to plan training —</option>';
+
+  const globalSquad = document.getElementById('globalSquadFilter').value;
+  const squadOk = p => globalSquad === 'ALL' || (p.squad || 'main') === globalSquad;
+
+  const youths = state.players.filter(p => p.youth && squadOk(p)).sort((a,b) => a.weeksLeft - b.weeksLeft);
+  const seniors = state.players.filter(p => !p.youth && squadOk(p)).sort((a,b) => a.ageNum - b.ageNum);
+
+  const mainYouths = youths.filter(p => p.squad !== 'affiliate');
+  const affYouths = youths.filter(p => p.squad === 'affiliate');
+  const mainSeniors = seniors.filter(p => p.squad !== 'affiliate');
+  const affSeniors = seniors.filter(p => p.squad === 'affiliate');
+
+  if (mainYouths.length) {
+    const og = document.createElement('optgroup'); og.label = '🌱 Youth Academy';
+    mainYouths.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = `${p.name} (${p.age}.${p.ageweeks}) — Grad ${p.gradSeasonWeek}`; og.appendChild(o); });
+    sel.appendChild(og);
+  }
+  if (mainSeniors.length) {
+    const og = document.createElement('optgroup'); og.label = '👔 Main Squad';
+    mainSeniors.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = `${p.name} (${p.age}.${p.ageweeks})`; og.appendChild(o); });
+    sel.appendChild(og);
+  }
+  if (affYouths.length) {
+    const og = document.createElement('optgroup'); og.label = '🌱 Affiliate Youth';
+    affYouths.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = `${p.name} (${p.age}.${p.ageweeks}) — Grad ${p.gradSeasonWeek}`; og.appendChild(o); });
+    sel.appendChild(og);
+  }
+  if (affSeniors.length) {
+    const og = document.createElement('optgroup'); og.label = '🟡 Affiliate Squad';
+    affSeniors.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = `${p.name} (${p.age}.${p.ageweeks}) [Affiliate]`; og.appendChild(o); });
+    sel.appendChild(og);
+  }
+  if (current) sel.value = current;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════
+function switchTab(tabId, btn) {
+  currentTabId = tabId;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else document.querySelectorAll('.tab').forEach((t,i) => { if (t.getAttribute('onclick') && t.getAttribute('onclick').includes(`'${tabId}'`)) t.classList.add('active'); });
+  document.getElementById(`panel-${tabId}`).classList.add('active');
+  if (tabId === 'lineups') renderLineups();
+  if (tabId === 'training') {
+    populatePlannerSelect();
+    buildPlannerGrids();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// IMPORT
+// ═══════════════════════════════════════════════════════════════
+function importTSV(merge) {
+  const raw = document.getElementById('tsvInput').value;
+  const s = parseInt(document.getElementById('impSeason').value || '67', 10);
+  const w = parseInt(document.getElementById('impWeek').value || '0', 10);
+  const isAffiliate = document.getElementById('impIsAffiliate').checked;
+  const squadTag = isAffiliate ? 'affiliate' : 'main';
+  const imported = parseTSVLines(raw, s, w, squadTag);
+  const status = document.getElementById('importStatus');
+  if (imported.length === 0) {
+    status.style.color = '#f87171';
+    status.textContent = 'No valid player rows found. Make sure you include the tab-separated header row starting with team-id.';
+    return;
+  }
+  state.season = s; state.week = w;
+  document.getElementById('seasonBadge').textContent = `Baseline: Season ${s}, Week ${w}`;
+
+  if (merge) {
+    const map = new Map(state.players.map(p => [p.id, p]));
+    imported.forEach(p => {
+      if (map.has(p.id)) p.verdict = map.get(p.id).verdict;
+      map.set(p.id, p);
+    });
+    state.players = Array.from(map.values());
+  } else {
+    state.players = imported;
+  }
+  saveState();
+  saveHistorySnapshot();
+  renderAll();
+  status.style.color = '#34d399';
+  status.textContent = `Successfully loaded ${imported.length} players! (Supports labelled & numeric skill values.)`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════════
+function exportCSV() {
+  const headers = ['Squad','Name','Age','WeeksLeft','GradSeasonWeek','Rating','Wage','Bat','Bowl','Tech','Keep','Field','End','Pow','Exp','Cap','BowlerType','Talent1','Talent2','Verdict'];
+  const rows = state.players.map(p => [
+    p.youth ? 'Youth' : 'Senior',
+    `"${p.name}"`, `${p.age}.${p.ageweeks}`,
+    p.youth ? p.weeksLeft : 0, `"${p.gradSeasonWeek}"`,
+    p.rating, p.wage, p.bat, p.bowl, p.tech, p.keep, p.field, p.end, p.pow, p.exp, p.cap,
+    `"${p.bowlerType}"`, `"${p.talent1}"`, `"${p.talent2}"`, p.verdict
+  ].join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = `FTP_Squad_Analysis_S${state.season}W${state.week}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+function renderAll() {
+  renderStats();
+  renderTables();
+  populatePlannerSelect();
+}
+
+loadInitialData();
+renderAll();
+buildPlannerGrids();
+
+// ═══════════════════════════════════════════════════════════════
+// TRAINING EFFICIENCY RANKER
+// ═══════════════════════════════════════════════════════════════
+function showEfficiencyPanel() {
+  const sel = document.getElementById('plannerPlayerSelect').value;
+  const p = sel ? state.players.find(x => x.id === sel) : null;
+  const academy = document.getElementById('pAcademyMain').value;
+  const age = p ? p.age : parseInt(document.getElementById('pAge').value) || 21;
+  const talent = document.getElementById('pTalent').value || 'None';
+  const card = document.getElementById('plannerToolCard');
+  const out = document.getElementById('plannerToolOutput');
+  card.style.display = '';
+
+  const SKILL_DISPLAY = { bat:'Batting', bowl:'Bowling', tech:'Technique', keep:'Keeping', field:'Fielding', end:'Endurance', pow:'Power' };
+  const rows = TRAINING_OPTIONS.filter(t => t !== 'Rest').map(t => {
+    const g = weekGain(t, academy, talent, age);
+    const total = Object.values(g).reduce((a,b) => a+b, 0);
+    return { type: t, gains: g, total };
+  }).sort((a,b) => b.total - a.total);
+
+  const skillCols = ['bat','bowl','tech','keep','field','end','pow'];
+  let html = `<h3>⚡ Training Efficiency — Age ${age}, Academy: ${academy}, Talent: ${talent}</h3>
+  <p style="font-size:0.76rem;color:var(--muted);margin-bottom:10px;">Sublevels gained per week per training type. Higher = better for that skill.</p>
+  <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+    <thead><tr style="background:var(--surface);">
+      <th style="padding:6px 8px;text-align:left;">Training</th>
+      <th style="padding:6px 8px;">Total</th>
+      ${skillCols.map(s=>`<th style="padding:6px 8px;">${SKILL_DISPLAY[s]}</th>`).join('')}
+    </tr></thead><tbody>`;
+
+  rows.forEach((r, i) => {
+    const bg = i === 0 ? 'rgba(251,191,36,0.08)' : 'transparent';
+    const badge = i === 0 ? ' 🥇' : '';
+    html += `<tr style="background:${bg};border-top:1px solid var(--border);">
+      <td style="padding:6px 8px;font-weight:600;">${r.type}${badge}</td>
+      <td style="padding:6px 8px;text-align:center;color:var(--accent);font-weight:700;">${Math.round(r.total)}</td>
+      ${skillCols.map(s => {
+        const v = Math.round(r.gains[s]||0);
+        const col = v > 80 ? '#34d399' : v > 40 ? '#fbbf24' : v > 0 ? 'var(--fg)' : 'var(--border)';
+        return `<td style="padding:6px 8px;text-align:center;color:${col};">${v||'—'}</td>`;
+      }).join('')}
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  out.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BEST TRAINING FOR TARGET
+// ═══════════════════════════════════════════════════════════════
+function showBestTrainingPanel() {
+  const card = document.getElementById('plannerToolCard');
+  const out = document.getElementById('plannerToolOutput');
+  card.style.display = '';
+
+  const SKILL_DISPLAY = { bat:'Batting', bowl:'Bowling', tech:'Technique', keep:'Keeping', field:'Fielding', end:'Endurance', pow:'Power' };
+  const skillKeys = Object.keys(SKILL_DISPLAY);
+
+  out.innerHTML = `<h3>🎯 Best Training for Target</h3>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;">
+    <div>
+      <label style="font-size:0.76rem;color:var(--muted);display:block;margin-bottom:3px;">Skill to train</label>
+      <select id="btSkill" style="padding:5px 8px;">
+        ${skillKeys.map(k=>`<option value="${k}">${SKILL_DISPLAY[k]}</option>`).join('')}
+      </select>
+    </div>
+    <div>
+      <label style="font-size:0.76rem;color:var(--muted);display:block;margin-bottom:3px;">Current level</label>
+      <input type="number" id="btCurrent" value="6" min="0" max="14" style="width:60px;padding:5px 8px;">
+    </div>
+    <div>
+      <label style="font-size:0.76rem;color:var(--muted);display:block;margin-bottom:3px;">Target level</label>
+      <input type="number" id="btTarget" value="9" min="1" max="15" style="width:60px;padding:5px 8px;">
+    </div>
+    <div>
+      <label style="font-size:0.76rem;color:var(--muted);display:block;margin-bottom:3px;">Player age</label>
+      <input type="number" id="btAge" value="${parseInt(document.getElementById('pAge').value)||21}" min="16" max="35" style="width:60px;padding:5px 8px;">
+    </div>
+    <div>
+      <label style="font-size:0.76rem;color:var(--muted);display:block;margin-bottom:3px;">Academy</label>
+      <select id="btAcademy" style="padding:5px 8px;">
+        ${ACADEMY_NAMES.map(n=>`<option value="${n}"${n===document.getElementById('pAcademyMain').value?' selected':''}>${n.charAt(0).toUpperCase()+n.slice(1)}</option>`).join('')}
+      </select>
+    </div>
+    <div>
+      <label style="font-size:0.76rem;color:var(--muted);display:block;margin-bottom:3px;">Talent</label>
+      <select id="btTalent" style="padding:5px 8px;">
+        <option value="None">None</option>
+        <option value="Prodigy">Prodigy</option>
+        ${['Batting','Bowling','Technique','Keeping','Fielding','Endurance','Power'].map(s=>`<option value="Gifted (${s})"${document.getElementById('pTalent').value===`Gifted (${s})`?' selected':''}>Gifted (${s})</option>`).join('')}
+      </select>
+    </div>
+    <button onclick="calcBestTraining()" class="amber">Calculate</button>
+  </div>
+  <div id="btResult"></div>`;
+}
+
+function calcBestTraining() {
+  const sk = document.getElementById('btSkill').value;
+  const cur = parseInt(document.getElementById('btCurrent').value) || 6;
+  const tgt = parseInt(document.getElementById('btTarget').value) || 9;
+  const age = parseInt(document.getElementById('btAge').value) || 21;
+  const academy = document.getElementById('btAcademy').value;
+  const talent = document.getElementById('btTalent').value;
+  const res = document.getElementById('btResult');
+
+  if (tgt <= cur) { res.innerHTML = '<p style="color:#f87171;">Target must be higher than current level.</p>'; return; }
+
+  // Sublevels needed: from midpoint of cur to start of tgt
+  const subNeeded = SUBLEVELS_AT[Math.min(15,tgt)] - skillToSublevels(cur);
+
+  // Rank training types by gain/week for this skill
+  const options = TRAINING_OPTIONS.filter(t => t !== 'Rest').map(t => {
+    const g = weekGain(t, academy, talent, age);
+    const gain = g[sk] || 0;
+    return { type: t, gain };
+  }).filter(r => r.gain > 0).sort((a,b) => b.gain - a.gain);
+
+  if (!options.length) { res.innerHTML = '<p style="color:#f87171;">No training type gains that skill at this age.</p>'; return; }
+
+  const SKILL_DISPLAY = { bat:'Batting', bowl:'Bowling', tech:'Technique', keep:'Keeping', field:'Fielding', end:'Endurance', pow:'Power' };
+
+  let html = `<div style="font-size:0.78rem;margin-bottom:10px;color:var(--muted);">
+    Sublevels needed: <strong style="color:var(--fg);">${Math.round(subNeeded).toLocaleString()}</strong>
+    (${SKILL_DISPLAY[sk]}: level ${cur} → ${tgt})
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;">`;
+
+  options.forEach((opt, i) => {
+    const weeks = Math.ceil(subNeeded / opt.gain);
+    const seasons = (weeks / 15).toFixed(1);
+    const isBest = i === 0;
+    html += `<div style="background:var(--surface);border:1px solid ${isBest?'var(--accent)':'var(--border)'};border-radius:8px;padding:10px 14px;min-width:160px;${isBest?'box-shadow:0 0 0 1px var(--accent)30;':''}">
+      <div style="font-weight:700;color:${isBest?'var(--accent)':'var(--fg)'};">${opt.type}${isBest?' 🥇':''}</div>
+      <div style="font-size:0.82rem;margin-top:4px;"><strong>${weeks}</strong> weeks <span style="color:var(--muted);">(${seasons} seasons)</span></div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:2px;">${Math.round(opt.gain)} sublevels/wk</div>
+    </div>`;
+  });
+  html += '</div>';
+  res.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COPY PLAN BETWEEN PLAYERS
+// ═══════════════════════════════════════════════════════════════
+function showCopyPlanModal() {
+  const fromId = document.getElementById('plannerPlayerSelect').value;
+  if (!fromId) { alert('Select a player first to copy their plan.'); return; }
+  const fromP = state.players.find(x => x.id === fromId);
+  const card = document.getElementById('plannerToolCard');
+  const out = document.getElementById('plannerToolOutput');
+  card.style.display = '';
+
+  const others = state.players.filter(p => p.id !== fromId);
+  const opts = others.map(p => `<option value="${p.id}">${p.name} (${p.youth?'Youth':'Senior'}, ${(p.squad||'main')==='affiliate'?'AFF':'Main'})</option>`).join('');
+
+  out.innerHTML = `<h3>📋 Copy Training Plan</h3>
+  <p style="font-size:0.78rem;color:var(--muted);margin-bottom:12px;">Copy <strong>${fromP.name}</strong>'s current plan to another player.</p>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <select id="copyToPlayer" style="padding:5px 10px;min-width:220px;">${opts}</select>
+    <button onclick="executeCopyPlan('${fromId}')" class="amber">Copy Plan →</button>
+  </div>
+  <div id="copyPlanStatus" style="font-size:0.76rem;color:var(--accent);margin-top:8px;"></div>`;
+}
+
+function executeCopyPlan(fromId) {
+  const toId = document.getElementById('copyToPlayer').value;
+  if (!toId) return;
+  if (!state.trainingPlans) state.trainingPlans = {};
+  const fromPlan = state.trainingPlans[fromId] || { youth: {...plannerYouthSchedule}, senior: {...plannerSeniorSchedule} };
+  state.trainingPlans[toId] = { youth: {...fromPlan.youth}, senior: {...fromPlan.senior} };
+  saveState();
+  const toP = state.players.find(x => x.id === toId);
+  document.getElementById('copyPlanStatus').textContent = `✅ Plan copied to ${toP ? toP.name : toId}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT TRAINING PLAN AS TEXT
+// ═══════════════════════════════════════════════════════════════
+function exportPlanAsText() {
+  const sel = document.getElementById('plannerPlayerSelect').value;
+  const p = sel ? state.players.find(x => x.id === sel) : null;
+  const name = p ? p.name : 'Player';
+  const isYouth = document.getElementById('pIsYouth').value === '1';
+  const age = parseInt(document.getElementById('pAge').value) || 17;
+  const ageWeeks = parseInt(document.getElementById('pAgeWeeks').value) || 0;
+  const talent = document.getElementById('pTalent').value;
+  const academy = document.getElementById('pAcademyMain').value;
+
+  let lines = [`Training Plan: ${name}`, `Age: ${age}.${ageWeeks} | Talent: ${talent} | Academy: ${academy}`, ''];
+
+  if (isYouth) {
+    lines.push('=== YOUTH SCHEDULE ===');
+    for (let a = Math.max(16, age); a <= 20; a++) {
+      const wkStart = a === age ? ageWeeks : 0;
+      const weeks = [];
+      for (let wk = wkStart; wk <= 14; wk++) {
+        weeks.push(plannerYouthSchedule[`y_${a}_${wk}`] || 'Batting');
+      }
+      lines.push(`Age ${a}: ${weeks.join(', ')}`);
+    }
+    lines.push('');
+  }
+
+  lines.push('=== SENIOR SCHEDULE ===');
+  const seniorStart = isYouth ? 21 : Math.max(21, age);
+  const seasons = Math.min(11, Math.max(1, parseInt(document.getElementById('seniorSeasons').value) || 4));
+  for (let a = seniorStart; a < seniorStart + seasons; a++) {
+    const squad = plannerSeniorSchedule[`sq_${a}`] || 'main';
+    const acadAge = plannerSeniorSchedule[`acad_${a}`] || academy;
+    const weeks = [];
+    for (let wk = 0; wk <= 14; wk++) {
+      weeks.push(plannerSeniorSchedule[`s_${a}_${wk}`] || 'Bowling');
+    }
+    lines.push(`Age ${a} [${squad}, ${acadAge}]: ${weeks.join(', ')}`);
+  }
+
+  const text = lines.join('\n');
+  const card = document.getElementById('plannerToolCard');
+  const out = document.getElementById('plannerToolOutput');
+  card.style.display = '';
+  out.innerHTML = `<h3>📤 Training Plan Export</h3>
+  <textarea style="width:100%;height:200px;font-family:monospace;font-size:0.74rem;padding:8px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;" readonly>${text}</textarea>
+  <button style="margin-top:8px;" onclick="navigator.clipboard.writeText(document.querySelector('#plannerToolOutput textarea').value).then(()=>this.textContent='✅ Copied!')">📋 Copy to Clipboard</button>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ANALYTICS TAB
+// ═══════════════════════════════════════════════════════════════
+function renderAnalytics(view) {
+  if (currentTabId !== 'analytics') switchTab('analytics', null);
+  const el = document.getElementById('analyticsContent');
+
+  if (view === 'radar') renderRadar(el);
+  else if (view === 'age') renderAgeCurve(el);
+  else if (view === 'timeline') renderTimeline(el);
+  else if (view === 'compare') renderCompare(el);
+  else if (view === 'wage') renderWageBudget(el);
+  else if (view === 'history') renderHistory(el);
+}
+
+// ── Radar Chart ──────────────────────────────────────────────
+function renderRadar(el) {
+  const globalSquad = document.getElementById('globalSquadFilter').value;
+  const players = state.players.filter(p => globalSquad === 'ALL' || (p.squad||'main') === globalSquad);
+  const opts = players.map(p => `<option value="${p.id}">${p.name} (${p.youth?'Y':'S'}${(p.squad||'main')==='affiliate'?' AFF':''})</option>`).join('');
+
+  el.innerHTML = `<h3>🕸 Skill Radar Chart</h3>
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+    <select id="radarPlayer1" onchange="drawRadar()" style="padding:5px 10px;min-width:180px;"><option value="">— Player 1 —</option>${opts}</select>
+    <select id="radarPlayer2" onchange="drawRadar()" style="padding:5px 10px;min-width:180px;"><option value="">— Player 2 (optional) —</option>${opts}</select>
+  </div>
+  <canvas id="radarCanvas" width="420" height="380" style="display:block;margin:0 auto;"></canvas>
+  <div id="radarLegend" style="text-align:center;font-size:0.76rem;margin-top:8px;"></div>`;
+}
+
+function drawRadar() {
+  const id1 = document.getElementById('radarPlayer1').value;
+  const id2 = document.getElementById('radarPlayer2').value;
+  const p1 = state.players.find(x => x.id === id1);
+  const p2 = id2 ? state.players.find(x => x.id === id2) : null;
+  const canvas = document.getElementById('radarCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const skills = ['bat','bowl','tech','keep','field','end','pow'];
+  const labels = ['Batting','Bowling','Technique','Keeping','Fielding','Endurance','Power'];
+  const N = skills.length;
+  const cx = W/2, cy = H/2 - 10, R = Math.min(cx, cy) - 50;
+  const angleStep = (2*Math.PI)/N;
+  const startAngle = -Math.PI/2;
+
+  // Draw grid circles
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+  for (let r = 3; r <= 15; r += 3) {
+    ctx.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const a = startAngle + i*angleStep;
+      const rr = (r/15)*R;
+      i === 0 ? ctx.moveTo(cx+rr*Math.cos(a), cy+rr*Math.sin(a)) : ctx.lineTo(cx+rr*Math.cos(a), cy+rr*Math.sin(a));
+    }
+    ctx.stroke();
+  }
+  // Axes
+  for (let i = 0; i < N; i++) {
+    const a = startAngle + i*angleStep;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx+R*Math.cos(a), cy+R*Math.sin(a));
+    ctx.strokeStyle = '#334155'; ctx.stroke();
+    // Labels
+    const lx = cx + (R+22)*Math.cos(a), ly = cy + (R+22)*Math.sin(a);
+    ctx.fillStyle = '#94a3b8'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(labels[i], lx, ly);
+  }
+
+  function drawPlayer(p, color) {
+    if (!p) return;
+    ctx.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const idx = i % N;
+      const a = startAngle + idx*angleStep;
+      const val = (p[skills[idx]]||0)/15;
+      const px = cx + val*R*Math.cos(a), py = cy + val*R*Math.sin(a);
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = color+'33'; ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
+    // Dots + values
+    for (let i = 0; i < N; i++) {
+      const a = startAngle + i*angleStep;
+      const val = (p[skills[i]]||0)/15;
+      const px = cx + val*R*Math.cos(a), py = cy + val*R*Math.sin(a);
+      ctx.beginPath(); ctx.arc(px, py, 4, 0, 2*Math.PI);
+      ctx.fillStyle = color; ctx.fill();
+      ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 10px sans-serif';
+      ctx.fillText(p[skills[i]]||0, px + 6*Math.cos(a), py + 6*Math.sin(a));
+    }
+  }
+
+  drawPlayer(p1, '#3b82f6');
+  drawPlayer(p2, '#f59e0b');
+
+  // Legend
+  let leg = '';
+  if (p1) leg += `<span style="color:#3b82f6;font-weight:600;">● ${p1.name}</span>`;
+  if (p2) leg += `  <span style="color:#f59e0b;font-weight:600;">● ${p2.name}</span>`;
+  document.getElementById('radarLegend').innerHTML = leg;
+}
+
+// ── Age Curve ─────────────────────────────────────────────────
+function renderAgeCurve(el) {
+  const globalSquad = document.getElementById('globalSquadFilter').value;
+  const players = state.players.filter(p => globalSquad === 'ALL' || (p.squad||'main') === globalSquad);
+  const ageBuckets = {};
+  players.forEach(p => {
+    const a = Math.floor(p.age);
+    if (!ageBuckets[a]) ageBuckets[a] = { main:0, affiliate:0 };
+    ageBuckets[a][(p.squad||'main') === 'affiliate' ? 'affiliate' : 'main']++;
+  });
+  const ages = Array.from({length:21}, (_,i) => i+16);
+  const W = 680, H = 300, padL=40, padB=40, padT=20, padR=20;
+  const maxCount = Math.max(1, ...ages.map(a => (ageBuckets[a]?.main||0) + (ageBuckets[a]?.affiliate||0)));
+  const barW = (W-padL-padR)/ages.length - 4;
+  const scaleY = v => padT + (H-padT-padB) * (1 - v/maxCount);
+
+  let bars = '';
+  ages.forEach((a, i) => {
+    const main = ageBuckets[a]?.main || 0;
+    const aff = ageBuckets[a]?.affiliate || 0;
+    const total = main + aff;
+    const x = padL + i*((W-padL-padR)/ages.length) + 2;
+    if (total > 0) {
+      const yMain = scaleY(main), hMain = (H-padT-padB)*main/maxCount;
+      const yAff = scaleY(total), hAff = (H-padT-padB)*aff/maxCount;
+      bars += `<rect x="${x}" y="${yMain}" width="${barW}" height="${hMain}" fill="#3b82f6" opacity="0.8" rx="2"/>`;
+      if (aff > 0) bars += `<rect x="${x}" y="${yAff}" width="${barW}" height="${hAff}" fill="#f59e0b" opacity="0.8" rx="2"/>`;
+      bars += `<text x="${x+barW/2}" y="${scaleY(total)-4}" fill="#f8fafc" font-size="10" text-anchor="middle">${total}</text>`;
+    }
+    bars += `<text x="${x+barW/2}" y="${H-padB+14}" fill="#64748b" font-size="10" text-anchor="middle">${a}</text>`;
+  });
+  // Y axis ticks
+  let yticks = '';
+  for (let v = 0; v <= maxCount; v++) {
+    const y = scaleY(v);
+    yticks += `<line x1="${padL-4}" y1="${y}" x2="${padL}" y2="${y}" stroke="#334155"/>`;
+    yticks += `<text x="${padL-6}" y="${y+4}" fill="#64748b" font-size="10" text-anchor="end">${v}</text>`;
+  }
+
+  el.innerHTML = `<h3>📅 Squad Age Distribution</h3>
+  <div style="margin-bottom:8px;font-size:0.76rem;color:var(--muted);">
+    <span style="color:#3b82f6;font-weight:600;">■ Main</span>  <span style="color:#f59e0b;font-weight:600;">■ Affiliate</span>
+  </div>
+  <svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;background:var(--surface);border-radius:8px;padding:4px;">
+    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${H-padB}" stroke="#334155" stroke-width="1"/>
+    <line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="#334155" stroke-width="1"/>
+    ${yticks}${bars}
+    <text x="${W/2}" y="${H}" fill="#64748b" font-size="11" text-anchor="middle">Age</text>
+  </svg>
+  <p style="font-size:0.76rem;color:var(--muted);margin-top:8px;">Total: ${players.length} players.
+  Youth (16–20): ${players.filter(p=>p.youth).length} · Senior (21+): ${players.filter(p=>!p.youth).length}</p>`;
+}
+
+// ── Training Timeline (projected growth chart from last projection) ──
+function renderTimeline(el) {
+  el.innerHTML = `<h3>📈 Training Timeline</h3>
+  <p style="color:var(--muted);font-size:0.84rem;">Run a projection in the 🏋️ Training Planner first, then come back here to see the skill growth chart.</p>
+  <div id="timelineChart"></div>`;
+
+  if (!window._lastSnapshots || window._lastSnapshots.length < 2) return;
+  const snaps = window._lastSnapshots;
+  const skills = ['bat','bowl','tech','keep','field','end','pow'];
+  const skillNames = { bat:'Batting', bowl:'Bowling', tech:'Technique', keep:'Keeping', field:'Fielding', end:'Endurance', pow:'Power' };
+  const colors = { bat:'#3b82f6', bowl:'#10b981', tech:'#a855f7', keep:'#f59e0b', field:'#06b6d4', end:'#f87171', pow:'#fb923c' };
+
+  const W=680, H=300, padL=36, padB=50, padT=20, padR=20;
+  const labels = snaps.map(s=>s.label);
+  const N = snaps.length;
+  const xStep = (W-padL-padR)/(N-1);
+  const scaleY = v => padT + (H-padT-padB)*(1-v/15);
+
+  let paths = '';
+  for (const sk of skills) {
+    const vals = snaps.map(s=>s.skills[sk]||0);
+    const pts = vals.map((v,i)=>`${padL+i*xStep},${scaleY(v)}`).join(' ');
+    paths += `<polyline points="${pts}" fill="none" stroke="${colors[sk]}" stroke-width="2" opacity="0.85"/>`;
+    // Dots
+    vals.forEach((v,i) => {
+      paths += `<circle cx="${padL+i*xStep}" cy="${scaleY(v)}" r="3" fill="${colors[sk]}"/>`;
+    });
+  }
+  // Grid lines
+  let grid = '';
+  for (let v = 0; v <= 15; v+=3) {
+    const y = scaleY(v);
+    grid += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#1e293b" stroke-width="1"/>`;
+    grid += `<text x="${padL-4}" y="${y+4}" fill="#64748b" font-size="10" text-anchor="end">${v}</text>`;
+  }
+  // X labels (every other snap)
+  let xlabels = '';
+  labels.forEach((l,i) => {
+    if (i % 2 === 0 || i === labels.length-1) {
+      xlabels += `<text x="${padL+i*xStep}" y="${H-padB+16}" fill="#64748b" font-size="9" text-anchor="middle" transform="rotate(-30,${padL+i*xStep},${H-padB+16})">${l}</text>`;
+    }
+  });
+  // Legend
+  const legendItems = skills.map(sk=>`<span style="color:${colors[sk]};font-weight:600;margin-right:10px;">— ${skillNames[sk]}</span>`).join('');
+
+  document.getElementById('timelineChart').innerHTML = `
+  <svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;background:var(--surface);border-radius:8px;">
+    ${grid}${paths}${xlabels}
+    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${H-padB}" stroke="#334155"/>
+  </svg>
+  <div style="margin-top:8px;font-size:0.74rem;">${legendItems}</div>`;
+}
+
+// ── Compare Players ───────────────────────────────────────────
+function renderCompare(el) {
+  const globalSquad = document.getElementById('globalSquadFilter').value;
+  const players = state.players.filter(p => globalSquad === 'ALL' || (p.squad||'main') === globalSquad)
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  const opts = players.map(p=>`<option value="${p.id}">${p.name} (${p.youth?'Y':'S'}${(p.squad||'main')==='affiliate'?' AFF':''})</option>`).join('');
+
+  el.innerHTML = `<h3>⚖️ Compare Two Players</h3>
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+    <select id="cmpP1" onchange="drawCompare()" style="padding:5px 10px;min-width:200px;"><option value="">— Player 1 —</option>${opts}</select>
+    <select id="cmpP2" onchange="drawCompare()" style="padding:5px 10px;min-width:200px;"><option value="">— Player 2 —</option>${opts}</select>
+  </div>
+  <div id="cmpTable"></div>`;
+}
+
+function drawCompare() {
+  const id1 = document.getElementById('cmpP1').value;
+  const id2 = document.getElementById('cmpP2').value;
+  const p1 = state.players.find(x=>x.id===id1);
+  const p2 = state.players.find(x=>x.id===id2);
+  const out = document.getElementById('cmpTable');
+  if (!p1 || !p2) { out.innerHTML=''; return; }
+
+  const rows = [
+    ['Age', `${p1.age}.${p1.ageweeks}`, `${p2.age}.${p2.ageweeks}`, false],
+    ['Rating', p1.rating, p2.rating, true],
+    ['Wage', `$${p1.wage.toLocaleString()}`, `$${p2.wage.toLocaleString()}`, false],
+    ['Batting', p1.bat, p2.bat, true],
+    ['Bowling', p1.bowl, p2.bowl, true],
+    ['Technique', p1.tech, p2.tech, true],
+    ['Keeping', p1.keep, p2.keep, true],
+    ['Fielding', p1.field, p2.field, true],
+    ['Endurance', p1.end, p2.end, true],
+    ['Power', p1.pow, p2.pow, true],
+    ['Experience', p1.exp, p2.exp, true],
+    ['Captaincy', p1.cap, p2.cap, true],
+    ['Squad', (p1.squad||'main'), (p2.squad||'main'), false],
+    ['Training', p1.training||'—', p2.training||'—', false],
+    ['Talent 1', p1.talent1||'—', p2.talent1||'—', false],
+    ['Talent 2', p2.talent2||'—', p2.talent2||'—', false],
+  ];
+
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+    <thead><tr>
+      <th style="padding:7px 10px;text-align:left;background:var(--surface);">Attribute</th>
+      <th style="padding:7px 10px;text-align:center;background:#1e3a5f;color:#93c5fd;">${p1.name}</th>
+      <th style="padding:7px 10px;text-align:center;background:#1a2e1a;color:#86efac;">${p2.name}</th>
+    </tr></thead><tbody>`;
+
+  rows.forEach(([label, v1, v2, compare]) => {
+    let c1='', c2='';
+    if (compare && typeof v1==='number' && typeof v2==='number') {
+      if (v1>v2) { c1='color:#34d399;font-weight:700;'; }
+      else if (v2>v1) { c2='color:#34d399;font-weight:700;'; }
+    }
+    html += `<tr style="border-top:1px solid var(--border);">
+      <td style="padding:6px 10px;color:var(--muted);">${label}</td>
+      <td style="padding:6px 10px;text-align:center;${c1}">${typeof v1==='number'?v1.toLocaleString():v1}</td>
+      <td style="padding:6px 10px;text-align:center;${c2}">${typeof v2==='number'?v2.toLocaleString():v2}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  out.innerHTML = html;
+}
+
+// ── Wage Budget ───────────────────────────────────────────────
+function renderWageBudget(el) {
+  const globalSquad = document.getElementById('globalSquadFilter').value;
+  const squadOk = p => globalSquad === 'ALL' || (p.squad||'main') === globalSquad;
+  const players = state.players.filter(squadOk).sort((a,b)=>b.wage-a.wage);
+  const total = players.reduce((s,p)=>s+p.wage,0);
+  const budgetVal = state.wageBudget || 0;
+
+  const rows = players.map(p => {
+    const pct = total > 0 ? Math.round((p.wage/total)*100) : 0;
+    const barColor = p.wage > 15000 ? '#f87171' : p.wage > 10000 ? '#fbbf24' : '#34d399';
+    const aff = (p.squad||'main')==='affiliate';
+    return `<tr style="border-top:1px solid var(--border);">
+      <td style="padding:5px 8px;"><strong>${p.name}</strong>${aff?' <span style="font-size:0.68rem;background:#92400e;color:#fcd34d;padding:1px 4px;border-radius:3px;">AFF</span>':''}</td>
+      <td style="padding:5px 8px;color:var(--muted);font-size:0.78rem;">${p.youth?'Youth':'Senior'}, ${p.age}</td>
+      <td style="padding:5px 8px;text-align:right;font-weight:600;">$${p.wage.toLocaleString()}</td>
+      <td style="padding:5px 8px;width:120px;">
+        <div style="background:var(--border);border-radius:4px;height:8px;">
+          <div style="background:${barColor};width:${pct*2}%;max-width:100%;height:8px;border-radius:4px;"></div>
+        </div>
+      </td>
+      <td style="padding:5px 8px;color:var(--muted);font-size:0.76rem;">${pct}%</td>
+    </tr>`;
+  }).join('');
+
+  const overBudget = budgetVal > 0 && total > budgetVal;
+  el.innerHTML = `<h3>💰 Wage Budget Tracker</h3>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+    <div class="stat-card" style="min-width:150px;">
+      <div class="stat-label">Total Weekly Wage</div>
+      <div class="stat-value" style="color:${overBudget?'#f87171':'#34d399'};">$${total.toLocaleString()}</div>
+    </div>
+    <div class="stat-card" style="min-width:150px;">
+      <div class="stat-label">Budget Ceiling</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
+        <span style="color:var(--muted);font-size:0.78rem;">$</span>
+        <input type="number" id="wageBudgetInput" value="${budgetVal}" placeholder="Set budget..."
+          style="width:100px;padding:4px 6px;font-size:0.84rem;"
+          oninput="state.wageBudget=parseInt(this.value)||0;saveState();renderAnalytics('wage')">
+      </div>
+      ${overBudget?`<div style="color:#f87171;font-size:0.76rem;margin-top:4px;">⚠️ $${(total-budgetVal).toLocaleString()} over budget</div>`:''}
+    </div>
+    <div class="stat-card" style="min-width:150px;">
+      <div class="stat-label">Squad Size</div>
+      <div class="stat-value">${players.length} players</div>
+    </div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+    <thead><tr style="background:var(--surface);">
+      <th style="padding:6px 8px;text-align:left;">Player</th>
+      <th style="padding:6px 8px;text-align:left;">Type</th>
+      <th style="padding:6px 8px;text-align:right;">Weekly Wage</th>
+      <th style="padding:6px 8px;" colspan="2">Share</th>
+    </tr></thead><tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ── Squad History ─────────────────────────────────────────────
+function renderHistory(el) {
+  const history = state.history || [];
+  if (!history.length) {
+    el.innerHTML = `<h3>🗂 Squad History</h3>
+    <p style="color:var(--muted);font-size:0.84rem;">No snapshots yet. Import a new TSV export to automatically save a snapshot here. Each import saves the squad state so you can track progress over time.</p>`;
+    return;
+  }
+
+  let html = `<h3>🗂 Squad History — ${history.length} Snapshot${history.length>1?'s':''}</h3>
+  <div style="display:flex;flex-direction:column;gap:16px;">`;
+
+  for (const snap of [...history].reverse()) {
+    const seniors = snap.players.filter(p=>!p.youth);
+    const youths = snap.players.filter(p=>p.youth);
+    const totalWage = snap.players.reduce((s,p)=>s+p.wage,0);
+    const avgRating = seniors.length ? Math.round(seniors.reduce((s,p)=>s+p.rating,0)/seniors.length) : 0;
+    html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div>
+          <strong style="color:var(--accent);">Season ${snap.season}, Week ${snap.week}</strong>
+          <span style="color:var(--muted);font-size:0.76rem;margin-left:10px;">${new Date(snap.savedAt).toLocaleDateString()}</span>
+        </div>
+        <div style="display:flex;gap:16px;font-size:0.78rem;color:var(--muted);">
+          <span>${seniors.length} seniors · ${youths.length} youths</span>
+          <span>Avg rating: ${avgRating.toLocaleString()}</span>
+          <span>Wage: $${totalWage.toLocaleString()}/wk</span>
+        </div>
+      </div>
+    </div>`;
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// Save history snapshot on import
+function saveHistorySnapshot() {
+  if (!state.history) state.history = [];
+  // Don't duplicate same season+week
+  const exists = state.history.find(h => h.season === state.season && h.week === state.week);
+  if (exists) return;
+  state.history.push({
+    season: state.season,
+    week: state.week,
+    savedAt: Date.now(),
+    players: state.players.map(p => ({
+      id: p.id, name: p.name, age: p.age, rating: p.rating, wage: p.wage,
+      bat: p.bat, bowl: p.bowl, tech: p.tech, keep: p.keep, field: p.field,
+      end: p.end, pow: p.pow, youth: p.youth, squad: p.squad
+    }))
+  });
+  // Keep last 20 snapshots
+  if (state.history.length > 20) state.history = state.history.slice(-20);
+  saveState();
+}
+
+// Toggle senior schedule visibility (so you can focus on youth-only view)
+let seniorScheduleVisible = true;
+function toggleSeniorSchedule() {
+  seniorScheduleVisible = !seniorScheduleVisible;
+  const body = document.getElementById('seniorScheduleBody');
+  const icon = document.getElementById('seniorToggleIcon');
+  if (body) body.style.display = seniorScheduleVisible ? '' : 'none';
+  if (icon) icon.textContent = seniorScheduleVisible ? '▼' : '▶';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FIX SKILL GAPS — recommend training swaps to close imbalances
+// ═══════════════════════════════════════════════════════════════
+function showGapFixPanel() {
+  const card = document.getElementById('plannerToolCard');
+  const out  = document.getElementById('plannerToolOutput');
+  card.style.display = '';
+
+  // Read current skill levels from planner inputs
+  const skills = ['bat','bowl','tech','keep','field','end','pow'];
+  const skillNames = { bat:'Batting', bowl:'Bowling', tech:'Technique', keep:'Keeping', field:'Fielding', end:'Endurance', pow:'Power' };
+  const skillColors = { bat:'#3b82f6', bowl:'#10b981', tech:'#a855f7', keep:'#f59e0b', field:'#06b6d4', end:'#f87171', pow:'#fb923c' };
+
+  const cur = {};
+  for (const sk of skills) {
+    const el = document.getElementById(`sk_${sk}`);
+    cur[sk] = el ? (parseInt(el.value) || 0) : 0;
+  }
+
+  const talent   = document.getElementById('pTalent').value || 'None';
+  const age      = parseInt(document.getElementById('pAge').value) || 17;
+  const isYouth  = document.getElementById('pIsYouth').value === '1';
+
+  // Use the per-age academy from the schedule grid — same logic as runProjection()
+  const academyMain      = document.getElementById('pAcademyMain').value;
+  const academyAffiliate = document.getElementById('pAcademyAffiliate').value;
+  function academyForAge(a) {
+    if (isYouth && a <= 20) {
+      return plannerYouthSchedule[`acad_${a}`] || academyMain;
+    }
+    const sq = plannerSeniorSchedule[`sq_${a}`] || 'main';
+    return plannerSeniorSchedule[`acad_${a}`] || (sq === 'affiliate' ? academyAffiliate : academyMain);
+  }
+  const academy = academyForAge(age); // academy at the player's current age
+
+  // ── Define the gap rules ──────────────────────────────────
+  // In FTP: Technique is a soft ceiling for Batting. Bowling works independently.
+  // Common gaps people want to fix:
+  //   bat > tech  → need more Technique training (use Batting-Tech)
+  //   tech > bat  → need more Batting training (use Batting)
+  //   bowl > tech → bowl ahead of tech, need Bowling-Tech
+  //   end low     → needs Endurance training
+  const gaps = [];
+
+  const batVsTech = cur.bat - cur.tech;
+  if (batVsTech > 0) {
+    gaps.push({ label: 'Batting ahead of Technique', detail: `Bat ${cur.bat} vs Tech ${cur.tech} (+${batVsTech})`, fix: 'Batting-Tech', fixSk: 'tech', deficit: batVsTech, priority: 'high' });
+  } else if (batVsTech < -1) {
+    gaps.push({ label: 'Technique well ahead of Batting', detail: `Tech ${cur.tech} vs Bat ${cur.bat} (${batVsTech})`, fix: 'Batting', fixSk: 'bat', deficit: -batVsTech, priority: 'medium' });
+  }
+
+  const bowlVsTech = cur.bowl - cur.tech;
+  if (bowlVsTech > 0) {
+    gaps.push({ label: 'Bowling ahead of Technique', detail: `Bowl ${cur.bowl} vs Tech ${cur.tech} (+${bowlVsTech})`, fix: 'Bowling-Tech', fixSk: 'tech', deficit: bowlVsTech, priority: 'high' });
+  }
+
+  const batVsBowl = Math.abs(cur.bat - cur.bowl);
+  if (batVsBowl >= 3) {
+    const ahead = cur.bat > cur.bowl ? 'bat' : 'bowl';
+    const behind = ahead === 'bat' ? 'bowl' : 'bat';
+    const fixType = behind === 'bowl' ? 'Bowling' : 'Batting';
+    gaps.push({ label: `${skillNames[ahead]} far ahead of ${skillNames[behind]}`, detail: `Gap of ${batVsBowl} levels`, fix: fixType, fixSk: behind, deficit: batVsBowl, priority: 'low' });
+  }
+
+  if (cur.end <= 4) {
+    gaps.push({ label: 'Endurance critically low', detail: `Endurance: ${cur.end} (${cur.end <= 2 ? 'very low' : 'low'})`, fix: 'Endurance', fixSk: 'end', deficit: 5 - cur.end, priority: 'high' });
+  } else if (cur.end <= 6 && cur.end < Math.max(cur.bat, cur.bowl) - 2) {
+    gaps.push({ label: 'Endurance lagging behind primary skills', detail: `End ${cur.end} vs primary ${Math.max(cur.bat, cur.bowl)}`, fix: 'Endurance', fixSk: 'end', deficit: Math.max(cur.bat, cur.bowl) - cur.end, priority: 'medium' });
+  }
+
+  if (cur.field <= 3 && Math.max(cur.bat, cur.bowl) >= 6) {
+    gaps.push({ label: 'Fielding very low for skill level', detail: `Fielding: ${cur.field}`, fix: 'Fielding', fixSk: 'field', deficit: 5 - cur.field, priority: 'low' });
+  }
+
+  // ── Build output ──────────────────────────────────────────
+  if (!gaps.length) {
+    out.innerHTML = `<h3>🔧 Fix Skill Gaps</h3>
+    <div style="color:#34d399;font-size:0.88rem;padding:16px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.3);border-radius:8px;">
+      ✅ No significant skill gaps detected! Your skills look well balanced.
+    </div>
+    ${skillBar(cur, skillNames, skillColors)}`;
+    return;
+  }
+
+  // For each gap: how many weeks of recommended training closes it?
+  let html = `<h3>🔧 Fix Skill Gaps</h3>
+  ${skillBar(cur, skillNames, skillColors)}
+  <div style="margin:14px 0 10px;font-size:0.82rem;color:var(--muted);">Found <strong style="color:var(--fg);">${gaps.length}</strong> gap${gaps.length>1?'s':''} to fix — recommended training swaps:</div>
+  <div style="display:flex;flex-direction:column;gap:10px;">`;
+
+  for (const gap of gaps) {
+    const priorityColor = gap.priority === 'high' ? '#f87171' : gap.priority === 'medium' ? '#fbbf24' : '#60a5fa';
+    const priorityLabel = gap.priority === 'high' ? '🔴 High' : gap.priority === 'medium' ? '🟡 Medium' : '🔵 Low';
+
+    // Use the correct per-age academy — this is what the projection uses
+    const acadAtAge = academyForAge(age);
+    const gains = weekGain(gap.fix, acadAtAge, talent, age);
+    const gainPerWk = gains[gap.fixSk] || 0;
+    // Sublevels needed to close gap: 1 level ≈ avg 1250 sublevels
+    const subNeeded = gap.deficit * 1250;
+    const weeksNeeded = gainPerWk > 0 ? Math.ceil(subNeeded / gainPerWk) : '?';
+
+    // Squad label for this age
+    const isAff = isYouth ? false : (plannerSeniorSchedule[`sq_${age}`] || 'main') === 'affiliate';
+    const squadLabel = isAff ? '🟡 Affiliate' : '🏠 Main';
+
+    // Also show what training to swap FROM
+    const swapFrom = gap.fixSk === 'tech' ? (cur.bat >= cur.bowl ? 'Batting' : 'Bowling') :
+                     gap.fixSk === 'bat'  ? 'Batting-Tech' :
+                     gap.fixSk === 'bowl' ? 'Bowling-Tech' : null;
+
+    html += `<div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${priorityColor};border-radius:8px;padding:12px 16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;">
+        <div>
+          <div style="font-weight:700;color:var(--fg);margin-bottom:3px;">${gap.label}</div>
+          <div style="font-size:0.76rem;color:var(--muted);">${gap.detail} · Priority: <span style="color:${priorityColor};">${priorityLabel}</span></div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.76rem;color:var(--muted);">Est. weeks to close</div>
+          <div style="font-size:1.2rem;font-weight:700;color:${priorityColor};">${weeksNeeded}</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;background:#0f172a;border-radius:6px;padding:10px 14px;font-size:0.78rem;">
+        <div style="margin-bottom:6px;color:var(--muted);">Recommended fix:</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          ${swapFrom ? `<span style="background:#1e293b;padding:3px 10px;border-radius:4px;color:#f87171;text-decoration:line-through;">${swapFrom}</span>
+          <span style="color:var(--muted);">→</span>` : ''}
+          <span style="background:#1e3a2e;padding:3px 10px;border-radius:4px;color:#34d399;font-weight:600;">${gap.fix}</span>
+          <span style="color:var(--muted);font-size:0.72rem;">+${Math.round(gainPerWk)} ${gap.fixSk}/wk · Age ${age} · ${squadLabel} · ${acadAtAge} academy</span>
+        </div>
+        ${weeksNeeded !== '?' && weeksNeeded <= 15
+          ? `<div style="margin-top:6px;color:#34d399;font-size:0.72rem;">✅ Fixable within 1 season (${weeksNeeded} wks)</div>`
+          : weeksNeeded !== '?' && weeksNeeded <= 30
+          ? `<div style="margin-top:6px;color:#fbbf24;font-size:0.72rem;">⏳ Takes ~${Math.ceil(weeksNeeded/15)} seasons to fully close</div>`
+          : ''}
+      </div>
+    </div>`;
+  }
+
+  html += `</div>
+  <div style="margin-top:14px;font-size:0.74rem;color:var(--muted);padding:10px;background:var(--surface);border-radius:6px;">
+    💡 <strong>Tip:</strong> To apply these fixes, go into the schedule grid and swap the recommended weeks from the old training to the new one, then re-run the projection to see the corrected skill path.
+  </div>`;
+
+  out.innerHTML = html;
+}
+
+function skillBar(cur, skillNames, skillColors) {
+  const skills = ['bat','bowl','tech','keep','field','end','pow'];
+  let html = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;">`;
+  for (const sk of skills) {
+    const v = cur[sk] || 0;
+    const pct = Math.round((v/15)*100);
+    const col = skillColors[sk];
+    html += `<div style="flex:1;min-width:80px;">
+      <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted);margin-bottom:2px;">
+        <span>${skillNames[sk]}</span><span style="color:${col};font-weight:700;">${v}</span>
+      </div>
+      <div style="height:6px;background:#1e293b;border-radius:3px;overflow:hidden;">
+        <div style="height:6px;width:${pct}%;background:${col};border-radius:3px;"></div>
+      </div>
+    </div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT / IMPORT FULL STATE (cross-device sync)
+// ═══════════════════════════════════════════════════════════════
+function exportState() {
+  const data = localStorage.getItem('ftp_analyzer_state_v3') || '{}';
+  // Also bundle training plan schedules stored separately
+  const bundle = { v: 1, state: JSON.parse(data), ts: Date.now() };
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(bundle))));
+  const area = document.getElementById('stateExportArea');
+  area.style.display = '';
+  document.getElementById('stateExportText').value = encoded;
+}
+
+function importState() {
+  const raw = document.getElementById('stateImportText').value.trim();
+  const status = document.getElementById('stateImportStatus');
+  if (!raw) { status.style.color='#f87171'; status.textContent='Nothing pasted.'; return; }
+  try {
+    const bundle = JSON.parse(decodeURIComponent(escape(atob(raw))));
+    if (!bundle.state || !bundle.state.players) throw new Error('Invalid data');
+    localStorage.setItem('ftp_analyzer_state_v3', JSON.stringify(bundle.state));
+    status.style.color = '#34d399';
+    status.textContent = `✅ Loaded ${bundle.state.players.length} players! Reloading...`;
+    setTimeout(() => location.reload(), 1000);
+  } catch(e) {
+    status.style.color = '#f87171';
+    status.textContent = '❌ Invalid data — make sure you copied the full export.';
+  }
+}
+
+// Track current tab for analytics redirect
+let currentTabId = 'youth';
+</script>
+</body>
+</html>
