@@ -67,6 +67,8 @@
   button.blue:hover { opacity: 0.9; }
   button.amber { background: var(--amber); color: #1c1917; border-color: var(--amber); }
   button.amber:hover { opacity: 0.9; }
+  button.pitch-btn { font-size:0.78rem; padding:5px 11px; border-radius:20px; }
+  button.pitch-btn.active { background:var(--accent); color:#052e16; border-color:var(--accent); }
 
   .stats-grid {
     display: grid;
@@ -492,6 +494,57 @@
 
   <!-- LINEUPS PANEL -->
   <div id="panel-lineups" class="panel">
+    <div style="padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <span style="font-size:0.82rem;font-weight:600;color:var(--fg);white-space:nowrap;">🏟️ Conditions</span>
+
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:var(--muted);">
+          Pitch:
+          <select id="pitchSelect" onchange="updatePitchConfig()" style="font-size:0.8rem;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--fg);">
+            <option value="Sticky">Sticky</option>
+            <option value="Uneven">Uneven</option>
+            <option value="Green">Green</option>
+            <option value="Hard">Hard</option>
+            <option value="Flat" selected>Flat</option>
+            <option value="Slow">Slow</option>
+            <option value="Dry">Dry</option>
+            <option value="Crumbling">Crumbling</option>
+          </select>
+        </label>
+
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:var(--muted);">
+          Weather:
+          <select id="weatherSelect" onchange="updatePitchConfig()" style="font-size:0.8rem;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--fg);">
+            <option value="Humid">Humid</option>
+            <option value="Overcast">Overcast</option>
+            <option value="Cloudy" selected>Cloudy</option>
+            <option value="Sunny">Sunny</option>
+            <option value="Windy">Windy</option>
+            <option value="Hot">Hot</option>
+          </select>
+        </label>
+
+        <div id="pitchAdvice" style="font-size:0.78rem;color:var(--accent);padding:4px 10px;background:var(--accent)18;border-radius:6px;border:1px solid var(--accent)40;"></div>
+      </div>
+
+      <!-- Seamer count reference table (compact) -->
+      <div style="margin-top:12px;overflow-x:auto;">
+        <table id="seamTable" style="font-size:0.7rem;border-collapse:collapse;min-width:460px;">
+          <thead>
+            <tr>
+              <th style="padding:3px 7px;text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);"># Seam</th>
+              <th style="padding:3px 7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Humid</th>
+              <th style="padding:3px 7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Overcast</th>
+              <th style="padding:3px 7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Cloudy</th>
+              <th style="padding:3px 7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Sunny</th>
+              <th style="padding:3px 7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Windy</th>
+              <th style="padding:3px 7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Hot</th>
+            </tr>
+          </thead>
+          <tbody id="seamTableBody"></tbody>
+        </table>
+      </div>
+    </div>
     <div id="lineupContent"><!-- rendered by renderLineups() --></div>
   </div>
 
@@ -782,8 +835,9 @@ function skillLabel(n) { return SKILL_NUM_MAP[Math.min(15, Math.max(0, Math.roun
 // TRAINING GAIN DATABASE
 // Per-age sub-level gains for each skill under each training type.
 // Source: FTP_Training_5.4.xlsx DB sheet.
-// Keys: academy (deluxe/luxurious/lavish/excellent/superior/good/…),
-//       talent (None/Prodigy/Gifted (Batting)/…), training type, age 16-20
+// BASE_GAIN: sublevels per week at age 19, excellent academy, no talent
+// Calibrated against community Excel planner (Hannan Khadim, Prodigy, lavish, ages 16-20)
+// Bowling/Fielding/Fitness values verified; others scaled proportionally
 // We embed a simplified lookup: for each (academy, talent, training) combo
 // we store [End, Bat, Bowl, Tech, Pow, Keep, Field] gains per age group.
 // Ages 16-20 each have distinct multipliers baked into the reference sheet.
@@ -812,16 +866,16 @@ const ACADEMY_NAMES = ['minimal','meagre','inadequate','reasonable','satisfactor
 // Base sub-level gains per training week at age 19 (baseline), outstanding academy, no talent
 // (extracted from DB sheet row outstanding-None-* at age 19)
 const BASE_GAIN = {
-  'Batting':        { bat: 97, tech: 71, end: 32 },
-  'Batting-Tech':   { bat: 71, tech: 110, end: 32 },
-  'Bowling':        { bowl: 97, tech: 71, end: 32 },
-  'Bowling-Tech':   { bowl: 71, tech: 110, end: 32 },
-  'All-Rounder':    { bat: 68, bowl: 68, tech: 59, end: 32 },
-  'Keeping':        { keep: 208, tech: 71, field: 52, end: 32 },
-  'Keeper-Batsman': { bat: 78, keep: 104, tech: 71, field: 39, end: 32 },
-  'Fielding':       { field: 286, tech: 39, end: 32 },
-  'Fitness':        { end: 260, pow: 72 },
-  'Strength':       { end: 84, pow: 197 },
+  'Batting':        { bat: 6.86, tech: 5.02, end: 6.86 },
+  'Batting-Tech':   { bat: 5.02, tech: 7.78, end: 6.86 },
+  'Bowling':        { bowl: 6.86, tech: 5.02, end: 6.86 },
+  'Bowling-Tech':   { bowl: 5.02, tech: 7.78, end: 6.86 },
+  'All-Rounder':    { bat: 4.81, bowl: 4.81, tech: 4.17, end: 6.86 },
+  'Keeping':        { keep: 14.70, tech: 5.02, field: 0.81, end: 6.86 },
+  'Keeper-Batsman': { bat: 5.52, keep: 7.35, tech: 5.02, field: 0.61, end: 6.86 },
+  'Fielding':       { field: 4.45, tech: 1.63, end: 6.86 },
+  'Fitness':        { end: 55.77, pow: 30.53 },
+  'Strength':       { end: 6.86, pow: 83.60 },
   'Rest':           {}
 };
 
@@ -842,19 +896,20 @@ const TALENT_BOOST = {
   'Gifted (Power)': { pow: 1.2 }
 };
 
-// Senior age decay: gain per week = youth_gain * decay
-// Ages 21-29: flat 1.0 (players still improve), 30+: endurance doubles loss
-// In this simplified model we apply a mild age taper for 21+
+// Senior age gain multiplier (relative to age-19 reference rate in BASE_GAIN).
+// FTP training decreases each birthday; players still improve but slower than youth.
+// Values approximate community knowledge; exact game formula not publicly disclosed.
 function seniorAgeMult(age) {
   if (age < 21) return 1.0;
-  if (age <= 25) return 0.85;
-  if (age <= 28) return 0.70;
-  if (age <= 30) return 0.55;
-  return 0.0; // 31+ skills decline — handled as negative
+  if (age <= 23) return 0.90;
+  if (age <= 26) return 0.75;
+  if (age <= 29) return 0.55;
+  return 0.0; // 30+ skills decline — handled as negative decay
 }
 
-// Sub-levels per integer skill level (cumulative from DB Form-Exp summary)
-const SUBLEVELS_AT = [0, 999, 1999, 2999, 3999, 4999, 5999, 6999, 7999, 8999, 9999, 11499, 12999, 14499, 15999, 17499];
+// Sub-levels per integer skill level (cumulative; ~100 sublevels per level, matching community Excel planners)
+// Levels 0-10: 100 sublevels each; levels 11-15: 150 sublevels each (harder to level up at high end)
+const SUBLEVELS_AT = [0, 99, 199, 299, 399, 499, 599, 699, 799, 899, 999, 1149, 1299, 1449, 1599, 1749];
 
 function sublevelsToSkill(sublevels) {
   for (let i = SUBLEVELS_AT.length - 1; i >= 0; i--) {
@@ -866,7 +921,7 @@ function sublevelsToSkill(sublevels) {
 function skillToSublevels(skillInt) {
   const idx = Math.min(15, Math.max(0, skillInt));
   const lo = SUBLEVELS_AT[idx];
-  const hi = idx < 15 ? SUBLEVELS_AT[idx + 1] - 1 : 17499;
+  const hi = idx < 15 ? SUBLEVELS_AT[idx + 1] - 1 : 1749;
   return Math.floor((lo + hi) / 2); // midpoint — prevents rounding from dropping back a level
 }
 
@@ -1055,6 +1110,17 @@ function skillClass(val, isYouth) {
   }
 }
 
+function filterVerdict(v) {
+  const sel = document.getElementById('youthVerdictFilter');
+  if (sel) {
+    sel.value = (sel.value === v) ? 'ALL' : v; // toggle: click same filter to clear
+    renderTables();
+    // Scroll to the youth table
+    const tbl = document.getElementById('youthTable');
+    if (tbl) tbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
 function updateVerdict(id, newVal) {
   const p = state.players.find(x => x.id === id);
   if (p) { p.verdict = newVal; saveState(); renderStats(); }
@@ -1066,46 +1132,193 @@ function updateVerdict(id, newVal) {
 // ═══════════════════════════════════════════════════════════════
 // RECOMMENDED XI
 // ═══════════════════════════════════════════════════════════════
-function pickXI(players) {
-  // Score each player for batting and bowling strength
-  const pool = players.slice().sort((a, b) => b.rating - a.rating);
+// ── Pitch/Weather Data (from FTP seamer count table) ──────────────────────────
+// SEAM_TABLE[pitch][weather] = [min, max] recommended seamers
+const SEAM_TABLE = {
+  Sticky:    { Humid:[4,5], Overcast:[4,5], Cloudy:[3,4], Sunny:[3,4], Windy:[2,3], Hot:[2,3] },
+  Uneven:    { Humid:[4,5], Overcast:[4,5], Cloudy:[4,4], Sunny:[3,4], Windy:[3,4], Hot:[2,3] },
+  Green:     { Humid:[5,5], Overcast:[4,5], Cloudy:[4,4], Sunny:[4,4], Windy:[3,4], Hot:[3,4] },
+  Hard:      { Humid:[4,5], Overcast:[4,4], Cloudy:[3,4], Sunny:[3,4], Windy:[2,3], Hot:[2,3] },
+  Flat:      { Humid:[4,4], Overcast:[4,4], Cloudy:[3,4], Sunny:[2,4], Windy:[2,3], Hot:[2,3] },
+  Slow:      { Humid:[3,4], Overcast:[3,4], Cloudy:[2,3], Sunny:[2,3], Windy:[2,2], Hot:[2,2] },
+  Dry:       { Humid:[2,3], Overcast:[2,3], Cloudy:[2,3], Sunny:[2,2], Windy:[2,2], Hot:[1,2] },
+  Crumbling: { Humid:[3,4], Overcast:[3,4], Cloudy:[2,3], Sunny:[2,3], Windy:[2,2], Hot:[2,2] },
+};
 
+// Pitches where spin is effective (dry/worn surfaces)
+const SPIN_FAVOURED = ['Dry', 'Crumbling', 'Slow'];
+// Pitches where seam is especially effective
+const SEAM_FAVOURED = ['Green', 'Sticky', 'Uneven'];
+
+let currentPitchCfg = { seamMin:3, seamMax:4, spinBonus:1, seamBonus:1, label:'Flat / Cloudy', desc:'' };
+
+function buildPitchConfig(pitch, weather) {
+  const range = (SEAM_TABLE[pitch] || SEAM_TABLE.Flat)[weather] || [3,4];
+  const seamMin = range[0], seamMax = range[1];
+
+  // Spinner bonus: strong on Dry/Crumbling/Slow (independent of weather for now)
+  const spinBonus = SPIN_FAVOURED.includes(pitch) ? 1.5 : 1.0;
+  // Seamer bonus: green/sticky/uneven pitches in humid/overcast
+  const seamBonus = SEAM_FAVOURED.includes(pitch) && ['Humid','Overcast','Cloudy'].includes(weather) ? 1.4 : 1.0;
+
+  // Derive batting/bowling balance from recommended seamer count
+  // seamMax tells us how many pace bowlers to pick; spinners fill the rest of bowling quota
+  // Total bowlers ≈ seamMax + (spin-heavy pitch adds 1-2 spinners)
+  const totalBowlers = SPIN_FAVOURED.includes(pitch) ? Math.max(seamMax + 1, 4) : seamMax;
+  const batTarget = Math.max(3, 10 - totalBowlers - 1); // 1 keeper fixed
+  const arTarget  = batTarget >= 5 ? 1 : 2;
+
+  // Advice string
+  const advice = seamMax <= 2
+    ? `Spin-dominant: ${seamMax} seamers max — load up on spinners`
+    : SPIN_FAVOURED.includes(pitch)
+    ? `${seamMin}–${seamMax} seamers + extra spinners on this surface`
+    : `${seamMin}–${seamMax} seamers recommended`;
+
+  return {
+    seamMin, seamMax, spinBonus, seamBonus,
+    batTarget, arTarget, bowlTarget: totalBowlers, maxBowlers: totalBowlers + 1,
+    label: `${pitch} / ${weather}`, desc: advice,
+  };
+}
+
+function updatePitchConfig() {
+  const pitch   = document.getElementById('pitchSelect')?.value   || 'Flat';
+  const weather = document.getElementById('weatherSelect')?.value || 'Cloudy';
+  currentPitchCfg = buildPitchConfig(pitch, weather);
+
+  const adv = document.getElementById('pitchAdvice');
+  if (adv) adv.textContent = currentPitchCfg.desc;
+
+  renderSeamTable(pitch, weather);
+  renderLineups();
+}
+
+function renderSeamTable(activePitch, activeWeather) {
+  const pitches  = ['Sticky','Uneven','Green','Hard','Flat','Slow','Dry','Crumbling'];
+  const weathers = ['Humid','Overcast','Cloudy','Sunny','Windy','Hot'];
+  const tbody = document.getElementById('seamTableBody');
+  if (!tbody) return;
+
+  // Colour bands: dark green ≥5, mid green 4, light green 3-4, light blue 2-3, blue ≤2
+  function cellColor(min, max) {
+    const avg = (min + max) / 2;
+    if (avg >= 4.5) return '#16a34a';  // dark green
+    if (avg >= 3.8) return '#4ade80';  // mid green
+    if (avg >= 3.0) return '#86efac';  // light green
+    if (avg >= 2.3) return '#93c5fd';  // light blue
+    return '#38bdf8';                   // blue (spin territory)
+  }
+  function textColor(min, max) {
+    return (min+max)/2 >= 3.0 ? '#052e16' : '#0c2340';
+  }
+
+  tbody.innerHTML = pitches.map(p => {
+    const isActivePitch = p === activePitch;
+    return `<tr style="${isActivePitch ? 'background:var(--accent)18;font-weight:700;' : ''}">
+      <td style="padding:3px 7px;white-space:nowrap;border-bottom:1px solid var(--border)20;${isActivePitch ? 'color:var(--accent);' : 'color:var(--muted);'}">${p}</td>
+      ${weathers.map(w => {
+        const [mn, mx] = SEAM_TABLE[p][w];
+        const isActiveCell = isActivePitch && w === activeWeather;
+        const bg = cellColor(mn, mx);
+        const fg = textColor(mn, mx);
+        const val = mn === mx ? `${mn}` : `${mn}-${mx}`;
+        return `<td style="padding:3px 7px;text-align:center;border-bottom:1px solid var(--border)20;border-radius:3px;background:${bg};color:${fg};${isActiveCell ? 'outline:2px solid var(--fg);outline-offset:-2px;font-weight:800;' : ''}">${val}</td>`;
+      }).join('')}
+    </tr>`;
+  }).join('');
+}
+
+function isSpinner(p) {
+  // Spinner if talent includes Off-Spin, Leg-Spin, or similar
+  const t = ((p.talent1 || '') + ' ' + (p.talent2 || '')).toLowerCase();
+  return t.includes('spin') || t.includes('off') || t.includes('leg') || t.includes('slow');
+}
+
+function pickXI(players) {
+  if (players.length <= 11) return players.slice();
+
+  const cfg = currentPitchCfg;
+  const pool = players.slice();
   const used = new Set();
   const xi = [];
 
-  function pick(cond, limit) {
-    let count = 0;
-    for (const p of pool) {
-      if (count >= limit) break;
+  // Score helpers (pitch-adjusted)
+  const batScore  = p => p.bat * 2 + p.tech + p.end * 0.5;
+  const bowlScore = p => {
+    const base = p.bowl * 2 + p.tech + p.end * 0.5;
+    const bonus = isSpinner(p) ? cfg.spinBonus : cfg.seamBonus;
+    return base * bonus;
+  };
+  const arScore   = p => p.bat + p.bowl + p.tech;
+  const keepScore = p => p.keep * 2 + p.bat + p.tech;
+
+  function pickBest(scoreFn, limit, cond) {
+    const sorted = pool.slice().sort((a, b) => scoreFn(b) - scoreFn(a));
+    let n = 0;
+    for (const p of sorted) {
+      if (n >= limit) break;
       if (used.has(p.id)) continue;
-      if (cond(p)) { xi.push(p); used.add(p.id); count++; }
+      if (cond && !cond(p)) continue;
+      xi.push(p); used.add(p.id); n++;
     }
   }
 
-  // 1 keeper (best keep score)
-  const keepers = pool.slice().sort((a,b) => (b.keep + b.bat) - (a.keep + a.bat));
-  if (keepers.length) { xi.push(keepers[0]); used.add(keepers[0].id); }
+  // 1. Best keeper-batsman
+  const keeperPool = pool.slice().sort((a,b) => keepScore(b) - keepScore(a));
+  const keeper = keeperPool.find(p => p.keep >= 4) || keeperPool[0];
+  if (keeper) { xi.push(keeper); used.add(keeper.id); }
 
-  // Top batters (bat ≥ bowl, bat is primary)
-  pick(p => p.bat >= p.bowl && p.bat >= 5, 4);
+  const rest = () => pool.filter(p => !used.has(p.id));
 
-  // Top bowlers (bowl ≥ bat, bowl is primary)
-  pick(p => p.bowl > p.bat && p.bowl >= 5, 4);
+  // 2. All-rounders (pitch-dependent count)
+  pickBest(arScore, cfg.arTarget, p => p.bat >= 5 && p.bowl >= 5);
 
-  // Fill remaining with best remaining by rating
-  for (const p of pool) {
+  // 3. Specialist batters (pitch-adjusted target)
+  const battersNeeded = Math.max(0, cfg.batTarget - xi.filter(p => p.bat >= p.bowl).length);
+  pickBest(batScore, battersNeeded, p => p.bat > p.bowl);
+
+  // 4. Specialist bowlers (pitch-adjusted target)
+  const bowlersNeeded = Math.max(0, cfg.bowlTarget - xi.filter(p => p.bowl > p.bat).length);
+  pickBest(bowlScore, bowlersNeeded, p => p.bowl > p.bat);
+
+  // 5. Fill remaining (respect max bowler cap for the pitch)
+  const byRating = pool.slice().sort((a, b) => b.rating - a.rating);
+  for (const p of byRating) {
+    if (xi.length >= 11) break;
+    if (used.has(p.id)) continue;
+    const bowlerCount = xi.filter(q => q.bowl > q.bat).length;
+    if (bowlerCount >= cfg.maxBowlers && p.bowl > p.bat && rest().some(q => q.bat >= q.bowl)) continue;
+    xi.push(p); used.add(p.id);
+  }
+  for (const p of byRating) {
     if (xi.length >= 11) break;
     if (!used.has(p.id)) { xi.push(p); used.add(p.id); }
   }
+
+  // Sort into cricket batting order
+  const batOrder = p => {
+    if (p.id === keeper?.id) return 2;
+    const balanced = p.bat >= 5 && p.bowl >= 5;
+    if (balanced && p.bat >= p.bowl) return 1;
+    if (balanced && p.bowl > p.bat)  return 3;
+    if (balanced)                    return 1;
+    if (p.bat > p.bowl)              return 0;
+    return 4;
+  };
+  xi.sort((a, b) => {
+    if (batOrder(a) !== batOrder(b)) return batOrder(a) - batOrder(b);
+    return batScore(b) - batScore(a);
+  });
 
   return xi.slice(0, 11);
 }
 
 function roleTag(p) {
-  if (p.keep >= 8 && (p.bat >= 7 || p.bowl >= 7)) return 'WK';
-  if (p.bat >= 9 && p.bowl >= 9) return 'AR';
-  if (p.bat >= 9) return 'BAT';
-  if (p.bowl >= 9) return 'BOWL';
+  if (p.keep > 0 && p.keep >= p.bat && p.keep >= p.bowl) return 'WK';
+  if (p.bat >= 5 && p.bowl >= 5) return 'AR';
+  if (p.bat > p.bowl) return 'BAT';
+  if (p.bowl > p.bat) return 'BOWL';
   return '';
 }
 
@@ -1165,7 +1378,8 @@ function renderLineups() {
   const affSeniors    = state.players.filter(p => !p.youth &&  p.squad === 'affiliate'             && squadOk(p));
   const affYouths     = state.players.filter(p =>  p.youth &&  p.squad === 'affiliate'             && squadOk(p));
 
-  let html = `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;">Auto-generated from current squad data · ${label}</div><div class="xi-grid">`;
+  const cfg = currentPitchCfg;
+  let html = `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;">Auto-generated · ${label} · <strong style="color:var(--accent);">🏟️ ${cfg.label}</strong> — ${cfg.seamMin}–${cfg.seamMax} seamers</div><div class="xi-grid">`;
 
   if (globalSquad === 'ALL' || globalSquad === 'main') {
     html += renderLineupCard(`🏆 Main Senior XI`, mainSeniors, '');
@@ -1214,11 +1428,11 @@ function renderStats() {
     <div class="stat-card">
       <div class="stat-label">Academy Pipeline${squadLabel}</div>
       <div class="stat-value" style="font-size:1.15rem;">
-        <span style="color:#34d399">${keepCount} Keep</span> •
-        <span style="color:#fbbf24">${watchCount} Watch</span> •
-        <span style="color:#f87171">${sellCount} Sell</span>
+        <span style="color:#34d399;cursor:pointer;text-decoration:underline dotted;" onclick="filterVerdict('KEEP')" title="Show KEEP players">${keepCount} Keep</span> •
+        <span style="color:#fbbf24;cursor:pointer;text-decoration:underline dotted;" onclick="filterVerdict('WATCH')" title="Show WATCH players">${watchCount} Watch</span> •
+        <span style="color:#f87171;cursor:pointer;text-decoration:underline dotted;" onclick="filterVerdict('SELL')" title="Show SELL players">${sellCount} Sell</span>
       </div>
-      <div class="stat-sub">Click any verdict dropdown to adjust</div>
+      <div class="stat-sub">Click a count to filter the youth table</div>
     </div>
   `;
 }
@@ -1723,7 +1937,7 @@ function parseTrainingLog() {
 
   for (const [sk, info] of Object.entries(latest)) {
     const floor = SUBLEVELS_AT[info.newLevel];
-    const ceiling = info.newLevel < 15 ? SUBLEVELS_AT[info.newLevel + 1] - 1 : 17499;
+    const ceiling = info.newLevel < 15 ? SUBLEVELS_AT[info.newLevel + 1] - 1 : 1749;
     const weeksAgo = Math.max(0, Math.floor((now - info.date) / MS_PER_WEEK));
     // Store floor + small progress estimate. We don't know exact training, so
     // add weeksAgo * 50 as a rough average gain across all training types
@@ -1800,7 +2014,7 @@ function calcProjection() {
     if (plannerSubLevelOffsets[k] !== undefined) {
       // Validate: offset must be within the range of the stated skill level
       const lo = SUBLEVELS_AT[Math.min(15, Math.max(0, v))];
-      const hi = v < 15 ? SUBLEVELS_AT[v + 1] - 1 : 17499;
+      const hi = v < 15 ? SUBLEVELS_AT[v + 1] - 1 : 1749;
       sub[k] = Math.min(hi, Math.max(lo, plannerSubLevelOffsets[k]));
     } else {
       sub[k] = skillToSublevels(v);
@@ -2034,7 +2248,7 @@ function renderProjection(snapshots, startSkills, levelUps, youthEndIdx) {
       const sl = plannerSubLevelOffsets[sk];
       const intLevel = parseInt(document.getElementById(`sk_${sk}`)?.value) || 0;
       const lo = SUBLEVELS_AT[Math.min(15, intLevel)];
-      const hi = intLevel < 15 ? SUBLEVELS_AT[intLevel + 1] - 1 : 17499;
+      const hi = intLevel < 15 ? SUBLEVELS_AT[intLevel + 1] - 1 : 1749;
       const pct = Math.round(((sl - lo) / (hi - lo)) * 100);
       return `${skillNames2[sk] || sk}: ${sl.toLocaleString()} (${pct}% through level)`;
     });
@@ -2170,6 +2384,11 @@ function renderAll() {
 loadInitialData();
 renderAll();
 buildPlannerGrids();
+// Init pitch table with defaults
+currentPitchCfg = buildPitchConfig('Flat', 'Cloudy');
+renderSeamTable('Flat', 'Cloudy');
+const _initAdv = document.getElementById('pitchAdvice');
+if (_initAdv) _initAdv.textContent = currentPitchCfg.desc;
 
 // ═══════════════════════════════════════════════════════════════
 // TRAINING EFFICIENCY RANKER
