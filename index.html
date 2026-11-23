@@ -2354,7 +2354,9 @@ function calcProjection() {
     for (let wk = wkStart; wk <= 14; wk++) {
       const key = `s_${a}_${wk}`;
       const training = plannerSeniorSchedule[key] || 'Bowling';
-      const gains = weekGain(training, acad, talent, a);
+      // Prodigy is youth-only; Gifted talents persist through entire career
+      const seniorTalent = (talent === 'Prodigy') ? 'None' : talent;
+      const gains = weekGain(training, acad, seniorTalent, a);
       if (a >= 30) {
         const decayFactor = a >= 31 ? 2 : 1;
         applyDecayAndTrack(gains, a, wk, decayFactor);
@@ -2412,12 +2414,37 @@ function renderProjection(snapshots, startSkills, levelUps, youthEndIdx) {
     return html;
   }
 
+  // Total career delta block — always shows full start→end gain for each skill
+  function makeTotalBlock(fromSnap, toSnap, label, accentColor, icon) {
+    let html = `<div style="flex:1;min-width:260px;">
+      <div style="font-size:0.76rem;color:${accentColor};font-weight:600;margin-bottom:8px;">${icon} ${label}</div>
+      <div class="proj-summary">`;
+    for (const sk of skills) {
+      const start = fromSnap.skills[sk];
+      const end   = toSnap.skills[sk];
+      const delta = end - start;
+      const deltaClass = delta > 0 ? 'delta-pos' : delta < 0 ? 'delta-neg' : 'delta-zero';
+      const pct = Math.round((end / 15) * 100);
+      html += `
+        <div class="proj-mini">
+          <div class="label">${skillNames[sk]}</div>
+          <div class="val">${start}→${end} <span class="${deltaClass}" style="font-size:0.85rem;">${delta >= 0 ? '+' : ''}${delta}</span></div>
+          <div class="sub">${skillLabel(start)} → ${skillLabel(end)}</div>
+          <div class="skill-bar" style="margin-top:6px;"><div class="skill-bar-fill" style="width:${pct}%;background:${accentColor};"></div></div>
+        </div>`;
+    }
+    html += '</div></div>';
+    return html;
+  }
+
   let summaryHtml = `<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">`;
   if (youthSnap) {
     summaryHtml += makeSummaryBlock(youthSnap, `Graduation (${youthSnap.label})`, '#34d399', '🎓');
     summaryHtml += makeSummaryBlock(seniorSnap, `Career End (${seniorSnap.label})`, '#60a5fa', '📈');
+    summaryHtml += makeTotalBlock(startSnap, seniorSnap, `Total Career Gain`, '#f59e0b', '⚡');
   } else {
     summaryHtml += makeSummaryBlock(seniorSnap, `End of Projection (${seniorSnap.label})`, '#60a5fa', '📊');
+    summaryHtml += makeTotalBlock(startSnap, seniorSnap, `Total Career Gain`, '#f59e0b', '⚡');
   }
   summaryHtml += '</div>';
 
