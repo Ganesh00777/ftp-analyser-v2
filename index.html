@@ -777,6 +777,13 @@
           <span>This is an <strong style="color:#f59e0b;">Affiliate</strong> squad export</span>
         </label>
       </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:7px 14px;font-size:0.84rem;font-weight:600;color:var(--accent);transition:background 0.15s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--card)'">
+          📂 Upload TSV File
+          <input type="file" accept=".tsv,.txt,.csv" style="display:none;" onchange="loadTSVFile(event)">
+        </label>
+        <span style="font-size:0.78rem;color:var(--muted);">or paste below ↓</span>
+      </div>
       <textarea id="tsvInput" placeholder="team-id&#9;player-id&#9;firstnames&#9;surname&#9;age&#9;ageweeks..."></textarea>
       <div style="display: flex; gap: 10px; flex-wrap: wrap;">
         <button class="primary" onclick="importTSV(false)">Replace Roster with Pasted Data</button>
@@ -907,8 +914,9 @@ function seniorAgeMult(age) {
   return 0.0; // 30+ skills decline — handled as negative decay
 }
 
-// Sub-levels per integer skill level (cumulative from DB Form-Exp summary)
-const SUBLEVELS_AT = [0, 999, 1999, 2999, 3999, 4999, 5999, 6999, 7999, 8999, 9999, 11499, 12999, 14499, 15999, 17499];
+// Sub-levels per integer skill level (cumulative; ~100 sublevels per level, matching community Excel planners)
+// Levels 0-10: 100 sublevels each; levels 11-15: 150 sublevels each (harder to level up at high end)
+const SUBLEVELS_AT = [0, 99, 199, 299, 399, 499, 599, 699, 799, 899, 999, 1149, 1299, 1449, 1599, 1749];
 
 function sublevelsToSkill(sublevels) {
   for (let i = SUBLEVELS_AT.length - 1; i >= 0; i--) {
@@ -920,7 +928,7 @@ function sublevelsToSkill(sublevels) {
 function skillToSublevels(skillInt) {
   const idx = Math.min(15, Math.max(0, skillInt));
   const lo = SUBLEVELS_AT[idx];
-  const hi = idx < 15 ? SUBLEVELS_AT[idx + 1] - 1 : 17499;
+  const hi = idx < 15 ? SUBLEVELS_AT[idx + 1] - 1 : 1749;
   return Math.floor((lo + hi) / 2); // midpoint — prevents rounding from dropping back a level
 }
 
@@ -1026,7 +1034,7 @@ function parseTSVLines(tsvText, baseSeason, baseWeek, squadTag) {
       id: (cols[idx('player-id')] || name).trim(),
       name, age, ageweeks,
       ageNum: age + ageweeks / 15,
-      wage: parseInt(cols[idx('wage')] || '0', 10),
+      wage: parseInt(cols[idx('wage')], 10) || 0,
       rating: parseInt(cols[idx('rating')] || '0', 10),
       end:   parseSkillVal(cols[idx('endurance')]),
       tech:  parseSkillVal(cols[idx('technique')]),
@@ -1936,7 +1944,7 @@ function parseTrainingLog() {
 
   for (const [sk, info] of Object.entries(latest)) {
     const floor = SUBLEVELS_AT[info.newLevel];
-    const ceiling = info.newLevel < 15 ? SUBLEVELS_AT[info.newLevel + 1] - 1 : 17499;
+    const ceiling = info.newLevel < 15 ? SUBLEVELS_AT[info.newLevel + 1] - 1 : 1749;
     const weeksAgo = Math.max(0, Math.floor((now - info.date) / MS_PER_WEEK));
     // Store floor + small progress estimate. We don't know exact training, so
     // add weeksAgo * 50 as a rough average gain across all training types
@@ -2013,7 +2021,7 @@ function calcProjection() {
     if (plannerSubLevelOffsets[k] !== undefined) {
       // Validate: offset must be within the range of the stated skill level
       const lo = SUBLEVELS_AT[Math.min(15, Math.max(0, v))];
-      const hi = v < 15 ? SUBLEVELS_AT[v + 1] - 1 : 17499;
+      const hi = v < 15 ? SUBLEVELS_AT[v + 1] - 1 : 1749;
       sub[k] = Math.min(hi, Math.max(lo, plannerSubLevelOffsets[k]));
     } else {
       sub[k] = skillToSublevels(v);
@@ -2247,7 +2255,7 @@ function renderProjection(snapshots, startSkills, levelUps, youthEndIdx) {
       const sl = plannerSubLevelOffsets[sk];
       const intLevel = parseInt(document.getElementById(`sk_${sk}`)?.value) || 0;
       const lo = SUBLEVELS_AT[Math.min(15, intLevel)];
-      const hi = intLevel < 15 ? SUBLEVELS_AT[intLevel + 1] - 1 : 17499;
+      const hi = intLevel < 15 ? SUBLEVELS_AT[intLevel + 1] - 1 : 1749;
       const pct = Math.round(((sl - lo) / (hi - lo)) * 100);
       return `${skillNames2[sk] || sk}: ${sl.toLocaleString()} (${pct}% through level)`;
     });
@@ -2318,6 +2326,24 @@ function switchTab(tabId, btn) {
 // ═══════════════════════════════════════════════════════════════
 // IMPORT
 // ═══════════════════════════════════════════════════════════════
+function loadTSVFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('tsvInput').value = e.target.result;
+    document.getElementById('importStatus').textContent = `✅ "${file.name}" loaded — click Replace or Merge to import.`;
+    document.getElementById('importStatus').style.color = 'var(--accent)';
+  };
+  reader.onerror = () => {
+    document.getElementById('importStatus').textContent = '❌ Failed to read file.';
+    document.getElementById('importStatus').style.color = '#f87171';
+  };
+  reader.readAsText(file);
+  // reset so same file can be re-uploaded
+  event.target.value = '';
+}
+
 function importTSV(merge) {
   const raw = document.getElementById('tsvInput').value;
   const s = parseInt(document.getElementById('impSeason').value || '67', 10);
