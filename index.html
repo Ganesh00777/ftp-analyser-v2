@@ -2392,61 +2392,73 @@ function renderProjection(snapshots, startSkills, levelUps, youthEndIdx) {
   const youthSnap = (youthEndIdx !== undefined && youthEndIdx >= 0) ? snapshots[youthEndIdx] : null;
   const seniorSnap = endSnap;
 
-  function makeSummaryBlock(snap, label, accentColor, icon) {
-    let html = `<div style="flex:1;min-width:260px;">
-      <div style="font-size:0.76rem;color:${accentColor};font-weight:600;margin-bottom:8px;">${icon} ${label}</div>
+  // Build a summary panel: fromSnap→toSnap delta, final value & label shown
+  function makeSummaryBlock(fromSnap, toSnap, label, accentColor, icon) {
+    let html = `<div style="flex:1;min-width:280px;max-width:420px;">
+      <div style="font-size:0.76rem;color:${accentColor};font-weight:700;margin-bottom:10px;letter-spacing:0.04em;">${icon} ${label}</div>
       <div class="proj-summary">`;
     for (const sk of skills) {
-      const start = startSnap.skills[sk];
-      const end = snap.skills[sk];
-      const delta = end - start;
+      const startVal = fromSnap.skills[sk];
+      const endVal   = toSnap.skills[sk];
+      const delta    = endVal - startVal;
       const deltaClass = delta > 0 ? 'delta-pos' : delta < 0 ? 'delta-neg' : 'delta-zero';
-      const pct = Math.round((end / 15) * 100);
+      const pct = Math.round((endVal / 15) * 100);
+      const deltaStr = `${delta >= 0 ? '+' : ''}${delta}`;
       html += `
         <div class="proj-mini">
           <div class="label">${skillNames[sk]}</div>
-          <div class="val">${end} <span class="${deltaClass}" style="font-size:0.85rem;">${delta >= 0 ? '+' : ''}${delta}</span></div>
-          <div class="sub">${skillLabel(end)}</div>
-          <div class="skill-bar" style="margin-top:6px;"><div class="skill-bar-fill" style="width:${pct}%;background:${skillColors[sk]};"></div></div>
+          <div class="val">${endVal} <span class="${deltaClass}" style="font-size:0.82rem;">${deltaStr}</span></div>
+          <div class="sub">${skillLabel(endVal)}</div>
+          <div class="skill-bar" style="margin-top:5px;"><div class="skill-bar-fill" style="width:${pct}%;background:${skillColors[sk]};"></div></div>
         </div>`;
     }
     html += '</div></div>';
     return html;
   }
 
-  // Total career delta block — always shows full start→end gain for each skill
+  // Total panel: shows start→end for every skill
   function makeTotalBlock(fromSnap, toSnap, label, accentColor, icon) {
-    let html = `<div style="flex:1;min-width:260px;">
-      <div style="font-size:0.76rem;color:${accentColor};font-weight:600;margin-bottom:8px;">${icon} ${label}</div>
+    let html = `<div style="flex:1;min-width:280px;max-width:420px;">
+      <div style="font-size:0.76rem;color:${accentColor};font-weight:700;margin-bottom:10px;letter-spacing:0.04em;">${icon} ${label}</div>
       <div class="proj-summary">`;
     for (const sk of skills) {
-      const start = fromSnap.skills[sk];
-      const end   = toSnap.skills[sk];
-      const delta = end - start;
+      const startVal = fromSnap.skills[sk];
+      const endVal   = toSnap.skills[sk];
+      const delta    = endVal - startVal;
       const deltaClass = delta > 0 ? 'delta-pos' : delta < 0 ? 'delta-neg' : 'delta-zero';
-      const pct = Math.round((end / 15) * 100);
+      const pct = Math.round((endVal / 15) * 100);
       html += `
         <div class="proj-mini">
           <div class="label">${skillNames[sk]}</div>
-          <div class="val">${start}→${end} <span class="${deltaClass}" style="font-size:0.85rem;">${delta >= 0 ? '+' : ''}${delta}</span></div>
-          <div class="sub">${skillLabel(start)} → ${skillLabel(end)}</div>
-          <div class="skill-bar" style="margin-top:6px;"><div class="skill-bar-fill" style="width:${pct}%;background:${accentColor};"></div></div>
+          <div class="val">${startVal}→<b>${endVal}</b> <span class="${deltaClass}" style="font-size:0.82rem;">${delta >= 0 ? '+' : ''}${delta}</span></div>
+          <div class="sub">${skillLabel(startVal)} → ${skillLabel(endVal)}</div>
+          <div class="skill-bar" style="margin-top:5px;"><div class="skill-bar-fill" style="width:${pct}%;background:${accentColor};"></div></div>
         </div>`;
     }
     html += '</div></div>';
     return html;
   }
 
-  let summaryHtml = `<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">`;
+  let summaryHtml;
   if (youthSnap) {
-    summaryHtml += makeSummaryBlock(youthSnap, `Graduation (${youthSnap.label})`, '#34d399', '🎓');
-    summaryHtml += makeSummaryBlock(seniorSnap, `Career End (${seniorSnap.label})`, '#60a5fa', '📈');
-    summaryHtml += makeTotalBlock(startSnap, seniorSnap, `Total Career Gain`, '#f59e0b', '⚡');
+    // Youth player: 3 panels in a row, then total below
+    summaryHtml = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:20px;">
+        ${makeSummaryBlock(startSnap, youthSnap,   `Graduation (${youthSnap.label})`,  '#34d399', '🎓')}
+        ${makeSummaryBlock(youthSnap, seniorSnap,   `Senior Gain (→${seniorSnap.label})`, '#60a5fa', '📈')}
+        ${makeTotalBlock(  startSnap, seniorSnap,   `Total Career (${startSnap.label} → ${seniorSnap.label})`, '#f59e0b', '⚡')}
+      </div>`;
   } else {
-    summaryHtml += makeSummaryBlock(seniorSnap, `End of Projection (${seniorSnap.label})`, '#60a5fa', '📊');
-    summaryHtml += makeTotalBlock(startSnap, seniorSnap, `Total Career Gain`, '#f59e0b', '⚡');
+    // Find a mid-career snap (~halfway) for senior players so they get 3 meaningful panels
+    const midIdx = Math.floor((snapshots.length - 1) / 2);
+    const midSnap = snapshots[midIdx];
+    summaryHtml = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:20px;">
+        ${makeSummaryBlock(startSnap, midSnap,    `Mid Career (${midSnap.label})`,         '#a78bfa', '🏏')}
+        ${makeSummaryBlock(startSnap, seniorSnap, `Career End (${seniorSnap.label})`,       '#60a5fa', '📈')}
+        ${makeTotalBlock(  startSnap, seniorSnap, `Total Gain (${startSnap.label} → ${seniorSnap.label})`, '#f59e0b', '⚡')}
+      </div>`;
   }
-  summaryHtml += '</div>';
 
   // ── Full career skill table ──────────────────────────────────
   const SKILL_LABEL_SHORT = ['atr','dre','por','ord','avg','rea','cap','rel','acc','exp','out','spc','exc','wcl','eli','leg'];
